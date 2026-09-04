@@ -1207,13 +1207,14 @@ function renderAgendamentos(){
   <div class="mini-list" style="display:flex;flex-direction:column;gap:10px;">
     ${list.length?list.map(a=>`
     <div class="card" style="padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div style="width:46px;height:46px;border-radius:11px;background:var(--surface-2);color:var(--navy-light);display:flex;align-items:center;justify-content:center;flex:none;">${icon('car','',24)}</div>
       <div style="min-width:78px;">
         <div style="font-family:'Outfit';font-weight:700;font-size:15px;">${fmtDateBR(a.data)}</div>
         <div style="font-size:11px;color:var(--muted);">${escapeHtml(a.horario||'')}</div>
       </div>
       <div style="flex:1;min-width:180px;">
         <div style="font-weight:600;">${escapeHtml(a.nome||'Sem nome')} <span style="font-weight:400;color:var(--muted);">· ${escapeHtml(a.tipo||'')}</span></div>
-        <div style="font-size:12px;color:var(--text-2);display:flex;align-items:center;gap:5px;">${icon('car','',13)} ${escapeHtml(a.veiculo||'')} ${a.placa?('· '+escapeHtml(a.placa)):''}</div>
+        <div style="font-size:12px;color:var(--text-2);">${escapeHtml(a.veiculo||'')} ${a.placa?('· '+escapeHtml(a.placa)):''}</div>
         ${a.observacao?`<div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${escapeHtml(a.observacao)}</div>`:''}
       </div>
       <div style="font-weight:700;font-family:'Outfit';">${fmtMoney(a.valor)}</div>
