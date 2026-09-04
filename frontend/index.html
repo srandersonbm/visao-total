@@ -1,0 +1,1814 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visão Total</title>
+<meta name="description" content="Sistema de gestão para vistorias veiculares: dashboards de desempenho, agendamentos, transferências e relatórios em PDF/Excel.">
+<link rel="icon" href="logo.jpg">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --navy: #2d3774; --navy-dark:#1f2657; --navy-light:#4351a3;
+  --red:#d92b3a; --red-dark:#b81f2d;
+  --bg:#f6f6f4; --surface:#ffffff; --surface-2:#f0f0ee;
+  --border:#e3e2dd; --border-strong:#d2d1ca;
+  --text:#15161f; --text-2:#5a5c6b; --muted:#8b8d99;
+  --good:#0ca30c; --warning:#c98200; --serious:#c85a34; --critical:#d03b3b;
+  --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --c4:#eda100; --c5:#e87ba4; --c6:#4a3aa7; --c7:#e34948; --c8:#008300;
+  --shadow-sm: 0 1px 2px rgba(20,20,30,.06);
+  --shadow-md: 0 6px 20px -6px rgba(30,32,60,.16);
+  --shadow-lg: 0 20px 48px -12px rgba(20,22,50,.28);
+  --radius: 14px;
+  --ease: cubic-bezier(.22,.9,.32,1);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0f1017; --surface:#181a25; --surface-2:#1f212f;
+    --border:rgba(255,255,255,.09); --border-strong:rgba(255,255,255,.16);
+    --text:#f2f2f6; --text-2:#b7b9c8; --muted:#82849a;
+    --navy-light:#5a68c4;
+    --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#9085e9; --c7:#e66767; --c8:#2fae2f;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+    --shadow-md: 0 6px 24px -6px rgba(0,0,0,.5);
+    --shadow-lg: 0 24px 56px -16px rgba(0,0,0,.65);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0f1017; --surface:#181a25; --surface-2:#1f212f;
+  --border:rgba(255,255,255,.09); --border-strong:rgba(255,255,255,.16);
+  --text:#f2f2f6; --text-2:#b7b9c8; --muted:#82849a;
+  --navy-light:#5a68c4;
+  --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#9085e9; --c7:#e66767; --c8:#2fae2f;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-md: 0 6px 24px -6px rgba(0,0,0,.5);
+  --shadow-lg: 0 24px 56px -16px rgba(0,0,0,.65);
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:14.5px;line-height:1.45;-webkit-font-smoothing:antialiased;}
+h1,h2,h3,.display{font-family:'Outfit',system-ui,sans-serif;letter-spacing:-.01em;}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important;}}
+::selection{background:var(--navy-light);color:#fff;}
+a{color:inherit;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;font-size:inherit;color:var(--text);}
+svg{display:block;}
+
+/* ---------- App shell ---------- */
+.app{display:flex;min-height:100vh;}
+.sidebar{
+  width:238px;flex:none;background:var(--navy);color:#fff;display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;z-index:40;transition:transform .28s var(--ease);
+}
+.sb-brand{display:flex;align-items:center;gap:10px;padding:20px 18px 14px;}
+.sb-brand img{width:38px;height:38px;object-fit:contain;border-radius:9px;background:#fff;padding:3px;}
+.sb-brand .name{font-family:'Outfit';font-weight:800;font-size:16.5px;line-height:1.1;}
+.sb-brand .name small{display:block;font-family:'Inter';font-weight:500;font-size:10.5px;color:#c7cbec;letter-spacing:.04em;text-transform:uppercase;margin-top:2px;}
+.sb-nav{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:2px;}
+.sb-link{
+  display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;color:#d4d8f2;
+  background:transparent;border:none;text-align:left;width:100%;font-size:13.6px;font-weight:500;
+  transition:background .15s var(--ease),color .15s var(--ease);
+}
+.sb-link svg{width:19px;height:19px;flex:none;opacity:.85;}
+.sb-link:hover{background:rgba(255,255,255,.08);color:#fff;}
+.sb-link.active{background:#fff;color:var(--navy);font-weight:700;}
+.sb-link.active svg{opacity:1;}
+.sb-foot{padding:14px 18px 18px;font-size:11px;color:#9aa1d6;border-top:1px solid rgba(255,255,255,.1);}
+.sb-backdrop{display:none;}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column;}
+.topbar{
+  position:sticky;top:0;z-index:30;background:color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:14px;padding:14px 26px;
+}
+.hamburger{display:none;background:none;border:none;padding:6px;border-radius:8px;color:var(--text);}
+.hamburger:hover{background:var(--surface-2);}
+.hamburger svg{width:22px;height:22px;}
+.topbar h1{margin:0;font-size:19px;font-weight:700;}
+.topbar .subtitle{color:var(--muted);font-size:12.5px;margin-top:1px;}
+.topbar-spacer{flex:1;}
+.btn{
+  display:inline-flex;align-items:center;gap:7px;border-radius:10px;border:1px solid var(--border-strong);
+  background:var(--surface);color:var(--text);padding:9px 14px;font-size:13px;font-weight:600;
+  transition:transform .14s var(--ease),box-shadow .14s var(--ease),background .14s;white-space:nowrap;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm);}
+.btn:active{transform:translateY(0);}
+.btn svg{width:16px;height:16px;}
+.btn-primary{background:var(--navy);border-color:var(--navy);color:#fff;}
+.btn-primary:hover{background:var(--navy-dark);}
+.btn-accent{background:var(--red);border-color:var(--red);color:#fff;}
+.btn-accent:hover{background:var(--red-dark);}
+.btn-ghost{background:transparent;border-color:transparent;}
+.btn-ghost:hover{background:var(--surface-2);}
+.btn-sm{padding:6px 10px;font-size:12px;border-radius:8px;}
+.btn-icon{padding:8px;}
+.btn[disabled]{opacity:.5;pointer-events:none;}
+
+.panel-wrap{padding:22px 26px 60px;max-width:1360px;width:100%;margin:0 auto;}
+.panel{animation:panelIn .32s var(--ease);}
+@keyframes panelIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* ---------- Grids & cards ---------- */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:18px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);}
+.stat{padding:16px 18px;position:relative;overflow:hidden;}
+.stat-label{font-size:12px;color:var(--text-2);font-weight:600;margin-bottom:8px;}
+.stat-value{font-family:'Outfit';font-weight:700;font-size:26px;letter-spacing:-.01em;}
+.stat-delta{font-size:12px;font-weight:600;margin-top:6px;display:inline-flex;align-items:center;gap:4px;}
+.stat-delta.up{color:var(--good);}
+.stat-delta.down{color:var(--critical);}
+.stat-delta.flat{color:var(--muted);}
+
+.grid-2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+@media (max-width:960px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+
+.panel-header{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:18px;flex-wrap:wrap;}
+.panel-header h2{margin:0;font-size:22px;}
+.panel-header p{margin:3px 0 0;color:var(--muted);font-size:13px;}
+.panel-actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+.chart-card{padding:18px 20px 14px;}
+.chart-card h3{margin:0 0 2px;font-size:14.5px;}
+.chart-card .chart-sub{font-size:11.5px;color:var(--muted);margin-bottom:10px;}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:12px;color:var(--text-2);}
+.legend-item{display:flex;align-items:center;gap:6px;}
+.legend-dot{width:9px;height:9px;border-radius:3px;flex:none;}
+
+.empty-state{padding:34px 20px;text-align:center;color:var(--muted);font-size:13px;}
+.empty-state svg{width:34px;height:34px;margin-bottom:10px;opacity:.5;}
+
+/* ---------- Filters ---------- */
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+.field{display:flex;flex-direction:column;gap:4px;}
+.field label{font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.03em;}
+select,.input{
+  background:var(--surface);border:1px solid var(--border-strong);border-radius:9px;padding:8px 11px;
+  color:var(--text);font-size:13px;min-height:36px;
+}
+select:focus,.input:focus{outline:2px solid var(--navy-light);outline-offset:1px;}
+.search-wrap{position:relative;}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--muted);}
+.search-wrap input{padding-left:32px;min-width:190px;}
+
+/* ---------- Table ---------- */
+.table-scroll{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;}
+thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);
+  font-weight:600;padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap;}
+tbody td{padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap;font-variant-numeric:tabular-nums;}
+tbody tr{transition:background .12s;}
+tbody tr:hover{background:var(--surface-2);}
+tbody tr.clickable{cursor:pointer;}
+.td-strong{font-weight:600;}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:600;}
+.pill-good{background:color-mix(in srgb, var(--good) 14%, transparent);color:var(--good);}
+.pill-warn{background:color-mix(in srgb, var(--warning) 16%, transparent);color:var(--warning);}
+.pill-muted{background:var(--surface-2);color:var(--text-2);}
+.pill-critical{background:color-mix(in srgb, var(--critical) 14%, transparent);color:var(--critical);}
+.row-actions{display:flex;gap:4px;}
+.icon-btn{background:none;border:none;padding:6px;border-radius:7px;color:var(--muted);}
+.icon-btn:hover{background:var(--surface-2);color:var(--text);}
+.icon-btn svg{width:15px;height:15px;}
+.pagination{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:12px 14px;font-size:12.5px;color:var(--text-2);}
+
+/* ---------- Drawer (forms) ---------- */
+.drawer-backdrop{position:fixed;inset:0;background:rgba(10,10,20,.42);opacity:0;pointer-events:none;transition:opacity .25s var(--ease);z-index:60;}
+.drawer-backdrop.open{opacity:1;pointer-events:auto;}
+.drawer{
+  position:fixed;top:0;right:0;height:100%;width:min(420px,100%);background:var(--surface);
+  box-shadow:var(--shadow-lg);transform:translateX(100%);transition:transform .3s var(--ease);
+  z-index:61;display:flex;flex-direction:column;
+}
+.drawer.open{transform:translateX(0);}
+.drawer-head{padding:18px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.drawer-head h3{margin:0;font-size:16px;}
+.drawer-body{padding:18px 20px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:14px;}
+.drawer-foot{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:10px;}
+.form-row{display:flex;flex-direction:column;gap:5px;}
+.form-row label{font-size:12px;font-weight:600;color:var(--text-2);}
+.form-row .hint{font-size:11px;color:var(--muted);font-weight:400;}
+.form-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.chip-select{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{padding:6px 12px;border-radius:99px;border:1px solid var(--border-strong);background:var(--surface);font-size:12.5px;font-weight:600;color:var(--text-2);transition:all .13s;}
+.chip.active{background:var(--navy);border-color:var(--navy);color:#fff;}
+.chip.active.accent{background:var(--red);border-color:var(--red);}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:2px 0;}
+.switch{position:relative;width:40px;height:22px;flex:none;}
+.switch input{opacity:0;width:0;height:0;}
+.switch .track{position:absolute;inset:0;background:var(--border-strong);border-radius:99px;transition:.2s;}
+.switch .track:before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:var(--shadow-sm);}
+.switch input:checked + .track{background:var(--good);}
+.switch input:checked + .track:before{transform:translateX(18px);}
+
+/* ---------- Tag manager (config) ---------- */
+.tag-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.tag{display:flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--border);padding:6px 8px 6px 12px;border-radius:99px;font-size:12.5px;}
+.tag button{background:none;border:none;color:var(--muted);display:flex;padding:2px;border-radius:50%;}
+.tag button:hover{color:var(--critical);background:rgba(208,59,59,.12);}
+.tag-add{display:flex;gap:8px;margin-top:12px;}
+.tag-add input{flex:1;}
+
+/* ---------- Toast ---------- */
+.toast-stack{position:fixed;bottom:20px;right:20px;z-index:80;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--navy);color:#fff;padding:12px 16px;border-radius:10px;font-size:13px;font-weight:600;
+  box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:9px;transform:translateY(10px);opacity:0;animation:toastIn .3s var(--ease) forwards;}
+.toast svg{width:16px;height:16px;flex:none;}
+.toast.error{background:var(--critical);}
+@keyframes toastIn{to{transform:none;opacity:1;}}
+.toast.leaving{animation:toastOut .22s var(--ease) forwards;}
+@keyframes toastOut{to{transform:translateY(8px);opacity:0;}}
+
+/* ---------- misc ---------- */
+.skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,var(--border) 37%,var(--surface-2) 63%);background-size:400% 100%;animation:shimmer 1.4s ease infinite;border-radius:8px;}
+@keyframes shimmer{0%{background-position:100% 0}100%{background-position:0 0}}
+.source-badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 7px;border-radius:5px;}
+.source-badge.auto{background:color-mix(in srgb, var(--c1) 16%, transparent);color:var(--c1);}
+.source-badge.manual{background:var(--surface-2);color:var(--muted);}
+.link-quiet{color:var(--navy-light);font-weight:600;text-decoration:none;}
+.link-quiet:hover{text-decoration:underline;}
+.divider{height:1px;background:var(--border);margin:14px 0;}
+.mini-list{display:flex;flex-direction:column;gap:2px;}
+.mini-row{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);}
+.mini-row:last-child{border-bottom:none;}
+.avatar-dot{width:8px;height:8px;border-radius:50%;flex:none;}
+.mono{font-variant-numeric:tabular-nums;}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:99px;}
+::-webkit-scrollbar-track{background:transparent;}
+
+@media (max-width:960px){
+  .sidebar{position:fixed;left:0;transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .sb-backdrop{display:block;position:fixed;inset:0;background:rgba(10,10,20,.4);opacity:0;pointer-events:none;transition:opacity .25s;z-index:39;}
+  .sb-backdrop.open{opacity:1;pointer-events:auto;}
+  .hamburger{display:inline-flex;}
+  .panel-wrap{padding:16px 14px 50px;}
+  .topbar{padding:12px 14px;}
+  .form-2col{grid-template-columns:1fr;}
+  .topbar h1{font-size:16.5px;}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <img id="brandLogo" alt="Visão Total" src="logo.jpg">
+      <div class="name">Visão Total<small>Gestão de vistorias</small></div>
+    </div>
+    <nav class="sb-nav" id="sbNav"></nav>
+    <div class="sb-foot">Visão Total Vistorias<br>Painel interno · sincronizado em tempo real<br><button id="changeConnBtn" class="btn btn-sm btn-ghost" style="margin-top:8px;color:#c7cbec;border-color:rgba(255,255,255,.18);padding:5px 9px;">Alterar conexão</button></div>
+  </aside>
+  <div class="sb-backdrop" id="sbBackdrop"></div>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="hamburger" id="hamburgerBtn" aria-label="Abrir menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div>
+        <h1 id="pageTitle">Visão Geral</h1>
+        <div class="subtitle" id="pageSubtitle">Carregando painel…</div>
+      </div>
+      <div class="topbar-spacer"></div>
+      <button class="btn btn-primary" data-action="open-vistoria-drawer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Nova vistoria
+      </button>
+    </header>
+    <main class="panel-wrap" id="panelRoot">
+      <div class="kpi-row">
+        <div class="card stat"><div class="skeleton" style="height:60px"></div></div>
+        <div class="card stat"><div class="skeleton" style="height:60px"></div></div>
+        <div class="card stat"><div class="skeleton" style="height:60px"></div></div>
+        <div class="card stat"><div class="skeleton" style="height:60px"></div></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<div class="drawer" id="drawer"></div>
+<div class="toast-stack" id="toastStack"></div>
+
+<div id="connectGate" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(10,10,20,.5);opacity:0;transition:opacity .25s var(--ease);align-items:center;justify-content:center;padding:16px;">
+  <div class="card" style="max-width:380px;width:100%;padding:26px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow-lg);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <img src="logo.jpg" alt="" style="width:42px;height:42px;border-radius:10px;object-fit:contain;background:var(--surface-2);padding:4px;">
+      <div>
+        <div style="font-family:'Outfit';font-weight:800;font-size:16.5px;">Visão Total</div>
+        <div style="font-size:11.5px;color:var(--muted);">Conectar ao servidor da empresa</div>
+      </div>
+    </div>
+    <div class="form-row"><label>Endereço do servidor</label><input class="input" id="gateUrl" placeholder="https://vt.heringfotografia.com.br"></div>
+    <div class="form-row"><label>Token de acesso</label><input class="input" id="gateToken" type="password" placeholder="Cole aqui o token de acesso"></div>
+    <div id="gateError" style="display:none;color:var(--critical);font-size:12.5px;"></div>
+    <button class="btn btn-primary" id="gateSubmit" style="justify-content:center;">Conectar</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* =========================================================================
+   ICONS
+   ========================================================================= */
+const ICONS = {
+  home:'<path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9h5v-6h2v6h5v-9"/>',
+  vistorias:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v2H9z"/><path d="m9 13 2 2 4-4"/>',
+  evolucao:'<path d="M4 17l5-5 4 4 7-8"/><path d="M15 8h5v5"/>',
+  agendamentos:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16"/><path d="M8 3v4M16 3v4"/>',
+  transferencias:'<path d="M6 8h12l-3.5-3.5"/><path d="M18 16H6l3.5 3.5"/>',
+  conciliacao:'<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M8.5 7.5h7"/><circle cx="9" cy="11.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="11.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="11.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="0.9" fill="currentColor" stroke="none"/>',
+  relatorios:'<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M9.5 12h5M9.5 15.5h5"/>',
+  config:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2.4M12 18.6V21M4.5 7.5l2 1.4M17.5 15.1l2 1.4M3 12h2.4M18.6 12H21M4.5 16.5l2-1.4M17.5 8.9l2-1.4M7.5 4.5l1.4 2M15.1 17.5l1.4 2"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  trash:'<path d="M4 7h16"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4h6v3"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  x:'<path d="M6 6l12 12M18 6 6 18"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  download:'<path d="M12 4v12"/><path d="m6 12 6 6 6-6"/><path d="M5 20h14"/>',
+  arrowRight:'<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
+  phone:'<path d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24 9 9 0 0 0 2.9.46 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 9 9 0 0 0 .5 2.9 1 1 0 0 1-.25 1Z"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r="0.6" fill="currentColor" stroke="none"/>',
+  car:'<path d="M4 16V11l2-4h12l2 4v5"/><rect x="3" y="16" width="18" height="3" rx="1"/><circle cx="7.5" cy="19" r="1.3"/><circle cx="16.5" cy="19" r="1.3"/>',
+};
+function icon(name, cls){ return `<svg class="${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]||''}</svg>`; }
+
+const NAV = [
+  {id:'home', label:'Visão Geral', icon:'home'},
+  {id:'vistorias', label:'Vistorias', icon:'vistorias'},
+  {id:'evolucao', label:'Evolução & Marketing', icon:'evolucao'},
+  {id:'agendamentos', label:'Agendamentos', icon:'agendamentos'},
+  {id:'transferencias', label:'Transferências', icon:'transferencias'},
+  {id:'conciliacao', label:'Conciliação de Cartões', icon:'conciliacao'},
+  {id:'relatorios', label:'Relatórios', icon:'relatorios'},
+  {id:'config', label:'Configurações', icon:'config'},
+];
+const SUBTITLES = {
+  home:'Desempenho consolidado da Visão Total',
+  vistorias:'Lançamentos, filtros e histórico de vistorias',
+  evolucao:'Faturamento por canal e resultados de mídia',
+  agendamentos:'Próximas vistorias e confirmações',
+  transferencias:'Transferências e remarcações via despachante',
+  conciliacao:'Conferência de valores por maquineta',
+  relatorios:'Exporte relatórios em PDF ou Excel',
+  config:'Padrões, listas e identidade da empresa',
+};
+
+const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+/* =========================================================================
+   STATE
+   ========================================================================= */
+const state = {
+  db:null, downloads:null,
+  route:'home',
+  loaded:{vistorias:false, evolucao:false, agendamentos:false, transferencias:false, conciliacao:false, config:false},
+  vistorias:[], evolucao:[], agendamentos:[], transferencias:[],
+  conciliacao:{latam:[], santanderDebito:[], santanderCredito:[]},
+  config:{empresa:{nome:'Visão Total Vistorias'}, tiposVistoria:[], formasPagamento:[], clientes:[]},
+  ui:{
+    sidebarOpen:false,
+    homePeriod:'mes-atual',
+    vistoriasFilters:{periodo:'todos', tipo:'', forma:'', canal:'', status:'', busca:''},
+    vistoriasPage:1,
+    transfPage:1,
+    relatorio:{tipo:'vistorias', periodo:'mes-atual'},
+    drawer:null,
+  }
+};
+
+function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+const TODAY = new Date();
+
+/* =========================================================================
+   HELPERS: format, dates, money
+   ========================================================================= */
+function fmtMoney(n){ n = Number(n)||0; return n.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+function fmtCompact(n){
+  n = Number(n)||0; const abs=Math.abs(n);
+  if(abs>=1e6) return (n/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})+'M';
+  if(abs>=1e3) return (n/1e3).toLocaleString('pt-BR',{maximumFractionDigits:1})+'K';
+  return n.toLocaleString('pt-BR',{maximumFractionDigits:0});
+}
+function fmtDateBR(iso){ if(!iso) return '—'; const [y,m,d]=String(iso).split('-'); return d&&m&&y?`${d}/${m}/${y}`:iso; }
+function parseISODate(iso){ if(!iso) return null; const p=String(iso).split('-'); return new Date(+p[0], +p[1]-1, +p[2]||1); }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function toISO(d){ return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function addDays(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function monthKey(ano,mesNum){ return `${ano}-${pad2(mesNum)}`; }
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
+function uniq(arr){ return [...new Set(arr)]; }
+
+function inferCanal(cliente){
+  const c = (cliente||'').trim().toUpperCase();
+  if(c==='GOOGLE') return 'google';
+  if(c==='PARTICULAR'||c==='') return 'particular';
+  return 'parceiro';
+}
+const CANAL_LABEL = {google:'Google Ads', particular:'Particular', parceiro:'Parceiros'};
+const CANAL_COLOR = {google:'var(--c1)', particular:'var(--c2)', parceiro:'var(--c3)'};
+
+/* period -> {start, end, prevStart, prevEnd} using Date objects (inclusive start, exclusive end) */
+function resolvePeriod(key){
+  const now = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+  let start, end;
+  end = addDays(now,1);
+  if(key==='mes-atual'){ start = new Date(now.getFullYear(), now.getMonth(), 1); }
+  else if(key==='30d'){ start = addDays(now,-29); }
+  else if(key==='90d'){ start = addDays(now,-89); }
+  else if(key==='ano'){ start = new Date(now.getFullYear(),0,1); }
+  else { start = new Date(2000,0,1); }
+  const spanMs = end - start;
+  const prevEnd = start;
+  const prevStart = new Date(start.getTime()-spanMs);
+  return {start,end,prevStart,prevEnd};
+}
+function inRange(iso, start, end){ const d=parseISODate(iso); return d && d>=start && d<end; }
+
+/* =========================================================================
+   DATA ACCESS / DERIVED METRICS
+   ========================================================================= */
+function vistoriasConcluidas(list){ return list.filter(v=>v.status!=='pendente'); }
+
+function sumValor(list){ return list.reduce((s,v)=>s+(Number(v.valor)||0),0); }
+
+function getMonthFromVistorias(ano, mesNum){
+  return state.vistorias.filter(v=>v.ano===ano && MESES_PT.indexOf(v.mes)+1===mesNum);
+}
+
+/* merged evolução row: prefer live vistorias data when present for that month */
+function getEvoRow(doc){
+  const live = getMonthFromVistorias(doc.ano, doc.mesNum);
+  if(live.length){
+    const ok = vistoriasConcluidas(live);
+    const byCanal = {google:0,particular:0,parceiro:0};
+    const qtd = {google:0,particular:0,parceiro:0};
+    ok.forEach(v=>{ const c=v.canal||inferCanal(v.cliente); byCanal[c]=(byCanal[c]||0)+(Number(v.valor)||0); qtd[c]=(qtd[c]||0)+1; });
+    return Object.assign({},doc,{
+      faturamentoGoogle:byCanal.google, faturamentoParticular:byCanal.particular, faturamentoParceiros:byCanal.parceiro,
+      qtdGoogle:qtd.google, qtdParticular:qtd.particular, qtdParceiros:qtd.parceiro,
+      source:'auto'
+    });
+  }
+  return Object.assign({source:'manual'},doc);
+}
+function evoSorted(){ return [...state.evolucao].sort((a,b)=> a.ano-b.ano || a.mesNum-b.mesNum); }
+
+/* =========================================================================
+   TINY SVG CHART LIBRARY
+   ========================================================================= */
+function tip(el, text){ el.setAttribute('data-tip', text); }
+
+function barChart({data, height=180, moneyFmt=true, color='var(--c1)'}){
+  const w = Math.max(360, data.length*54);
+  const max = Math.max(1, ...data.map(d=>d.value));
+  const padL=6, padR=6, padB=26, padT=14;
+  const innerH = height-padT-padB;
+  const bw = Math.min(30, (w-padL-padR)/data.length*0.5);
+  const step = (w-padL-padR)/data.length;
+  let bars='', labels='', grid='';
+  [0,.5,1].forEach(f=>{
+    const y = padT + innerH*(1-f);
+    grid += `<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`;
+  });
+  data.forEach((d,i)=>{
+    const x = padL + step*i + (step-bw)/2;
+    const h = Math.max(2, innerH*(d.value/max));
+    const y = padT+innerH-h;
+    bars += `<rect data-tip="${escapeHtml(d.label)}: ${moneyFmt?fmtMoney(d.value):fmtCompact(d.value)}" class="chart-mark" x="${x}" y="${y}" width="${bw}" height="${h}" rx="4" fill="${d.color||color}"/>`;
+    labels += `<text x="${x+bw/2}" y="${height-8}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${escapeHtml(d.label)}</text>`;
+  });
+  return `<svg viewBox="0 0 ${w} ${height}" style="width:100%;height:${height}px" preserveAspectRatio="none">${grid}${bars}${labels}</svg>`;
+}
+
+function stackedBarChart({data, keys, colors, height=200, fmt=fmtMoney}){
+  const w = Math.max(420, data.length*58);
+  const totals = data.map(d=>keys.reduce((s,k)=>s+(Number(d[k])||0),0));
+  const max = Math.max(1,...totals);
+  const padL=6,padR=6,padB=26,padT=14;
+  const innerH=height-padT-padB;
+  const step=(w-padL-padR)/data.length;
+  const bw=Math.min(30,step*0.55);
+  let grid='',bars='',labels='';
+  [0,.5,1].forEach(f=>{ const y=padT+innerH*(1-f); grid+=`<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`; });
+  data.forEach((d,i)=>{
+    const x = padL+step*i+(step-bw)/2;
+    let yCursor = padT+innerH;
+    keys.forEach((k,ki)=>{
+      const val = Number(d[k])||0;
+      const h = innerH*(val/max);
+      if(h<=0.3) return;
+      const y = yCursor-h;
+      bars += `<rect data-tip="${escapeHtml(d.label)} · ${escapeHtml(k)}: ${fmt(val)}" class="chart-mark" x="${x}" y="${y}" width="${bw}" height="${Math.max(0,h-1.5)}" rx="3" fill="${colors[ki]}"/>`;
+      yCursor -= h;
+    });
+    labels += `<text x="${x+bw/2}" y="${height-8}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${escapeHtml(d.label)}</text>`;
+  });
+  return `<svg viewBox="0 0 ${w} ${height}" style="width:100%;height:${height}px" preserveAspectRatio="none">${grid}${bars}${labels}</svg>`;
+}
+
+function lineChart({series, height=200, fmt=fmtMoney, labels}){
+  const w = Math.max(420, (labels.length-1)*70+60);
+  const allVals = series.flatMap(s=>s.points);
+  const max = Math.max(1,...allVals), min=Math.min(0,...allVals);
+  const padL=8,padR=8,padB=26,padT=14;
+  const innerH=height-padT-padB, innerW=w-padL-padR;
+  const n = labels.length;
+  const xAt = i => padL + (n<=1?0:innerW*(i/(n-1)));
+  const yAt = v => padT + innerH*(1-((v-min)/((max-min)||1)));
+  let grid='';
+  [0,.5,1].forEach(f=>{ const y=padT+innerH*(1-f); grid+=`<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="var(--border)" stroke-width="1"/>`; });
+  let paths='', dots='', labelsSvg='';
+  series.forEach(s=>{
+    let d='';
+    s.points.forEach((v,i)=>{ d += (i===0?'M':'L')+xAt(i).toFixed(1)+' '+yAt(v).toFixed(1)+' '; });
+    paths += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    s.points.forEach((v,i)=>{
+      dots += `<circle data-tip="${escapeHtml(s.name)} · ${escapeHtml(labels[i])}: ${fmt(v)}" class="chart-mark" cx="${xAt(i).toFixed(1)}" cy="${yAt(v).toFixed(1)}" r="4" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`;
+    });
+  });
+  labels.forEach((l,i)=>{ labelsSvg += `<text x="${xAt(i).toFixed(1)}" y="${height-8}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${escapeHtml(l)}</text>`; });
+  return `<svg viewBox="0 0 ${w} ${height}" style="width:100%;height:${height}px" preserveAspectRatio="none">${grid}${paths}${dots}${labelsSvg}</svg>`;
+}
+
+function donutChart({data, size=168, fmt=fmtMoney}){
+  const total = data.reduce((s,d)=>s+d.value,0) || 1;
+  const r=size*0.32, cx=size/2, cy=size/2, strokeW=size*0.155;
+  let acc=-90, arcs='';
+  data.forEach(d=>{
+    const frac = d.value/total;
+    const angle = frac*360;
+    const large = angle>180?1:0;
+    const a0 = acc*Math.PI/180, a1=(acc+angle)*Math.PI/180;
+    const x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+    const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+    if(angle>0.4){
+      arcs += `<path data-tip="${escapeHtml(d.label)}: ${fmt(d.value)} (${(frac*100).toFixed(0)}%)" class="chart-mark" d="M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}" fill="none" stroke="${d.color}" stroke-width="${strokeW}"/>`;
+    }
+    acc += angle;
+  });
+  return `<svg viewBox="0 0 ${size} ${size}" style="width:${size}px;height:${size}px;max-width:100%">${arcs}
+    <text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)" font-family="Outfit">${fmtCompact(total)}</text>
+    <text x="${cx}" y="${cy+14}" text-anchor="middle" font-size="9.5" fill="var(--muted)">total</text>
+  </svg>`;
+}
+
+function hBarList({data, fmt=fmtMoney}){
+  const max = Math.max(1,...data.map(d=>d.value));
+  return `<div class="mini-list">${data.map(d=>`
+    <div class="mini-row">
+      <span class="avatar-dot" style="background:${d.color||'var(--c1)'}"></span>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-bottom:4px;">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;">${escapeHtml(d.label)}</span>
+          <span class="mono" style="color:var(--text-2);">${fmt(d.value)}</span>
+        </div>
+        <div style="height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden;">
+          <div style="height:100%;width:${Math.max(3,d.value/max*100)}%;background:${d.color||'var(--c1)'};border-radius:99px;"></div>
+        </div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function funnelChart({steps}){
+  const max = Math.max(1,...steps.map(s=>s.value));
+  return `<div style="display:flex;flex-direction:column;gap:8px;">${steps.map((s,i)=>{
+    const w = 30+ (s.value/max)*70;
+    const pct = i===0?100:(steps[0].value? s.value/steps[0].value*100 : 0);
+    return `<div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;">
+        <span style="font-weight:600;color:var(--text-2);">${escapeHtml(s.label)}</span>
+        <span class="mono">${fmtCompact(s.value)} <span style="color:var(--muted);">(${pct.toFixed(0)}%)</span></span>
+      </div>
+      <div style="height:16px;border-radius:6px;background:var(--surface-2);overflow:hidden;">
+        <div style="height:100%;width:${w}%;background:linear-gradient(90deg, var(--c1), color-mix(in srgb, var(--c1) 70%, white));border-radius:6px;"></div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function legendRow(items){
+  return `<div class="legend">${items.map(i=>`<span class="legend-item"><span class="legend-dot" style="background:${i.color}"></span>${escapeHtml(i.label)}</span>`).join('')}</div>`;
+}
+
+/* tooltip wiring (event delegation) */
+let tooltipEl;
+function ensureTooltip(){
+  if(tooltipEl) return tooltipEl;
+  tooltipEl = document.createElement('div');
+  tooltipEl.style.cssText = 'position:fixed;pointer-events:none;background:var(--text);color:var(--bg);font-size:11.5px;font-weight:600;padding:6px 9px;border-radius:7px;z-index:200;opacity:0;transition:opacity .1s;white-space:nowrap;box-shadow:var(--shadow-md);';
+  document.body.appendChild(tooltipEl);
+  return tooltipEl;
+}
+document.addEventListener('mousemove', e=>{
+  const mark = e.target.closest('.chart-mark');
+  const t = ensureTooltip();
+  if(mark && mark.dataset.tip){
+    t.textContent = mark.dataset.tip;
+    t.style.left = (e.clientX+14)+'px';
+    t.style.top = (e.clientY+14)+'px';
+    t.style.opacity='1';
+  } else { t.style.opacity='0'; }
+});
+
+/* =========================================================================
+   ANIMATED NUMBER
+   ========================================================================= */
+function animateValue(el){
+  const to = Number(el.dataset.count)||0;
+  const fmt = el.dataset.fmt;
+  const dur = 650; const t0 = performance.now();
+  function fmtFn(v){ return fmt==='money'?fmtMoney(v):fmt==='compact'?fmtCompact(v):Math.round(v).toLocaleString('pt-BR'); }
+  function step(t){
+    const p = Math.min(1,(t-t0)/dur);
+    const eased = 1-Math.pow(1-p,3);
+    el.textContent = fmtFn(to*eased);
+    if(p<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+function mountAnimatedNumbers(root){
+  root.querySelectorAll('[data-count]').forEach(animateValue);
+}
+
+/* =========================================================================
+   TOASTS
+   ========================================================================= */
+function toast(msg, type){
+  const stack = document.getElementById('toastStack');
+  const el = document.createElement('div');
+  el.className = 'toast'+(type==='error'?' error':'');
+  el.innerHTML = icon(type==='error'?'x':'check')+`<span>${escapeHtml(msg)}</span>`;
+  stack.appendChild(el);
+  setTimeout(()=>{ el.classList.add('leaving'); setTimeout(()=>el.remove(),240); }, 3000);
+}
+
+/* =========================================================================
+   ROUTING / NAV RENDER
+   ========================================================================= */
+function renderNav(){
+  const nav = document.getElementById('sbNav');
+  nav.innerHTML = NAV.map(item=>`
+    <button class="sb-link ${state.route===item.id?'active':''}" data-route="${item.id}">
+      ${icon(item.icon)} ${item.label}
+    </button>`).join('');
+}
+function setRoute(route){
+  state.route = route;
+  document.getElementById('pageTitle').textContent = NAV.find(n=>n.id===route).label;
+  document.getElementById('pageSubtitle').textContent = SUBTITLES[route];
+  renderNav();
+  closeSidebar();
+  renderRoute();
+}
+function renderRoute(){
+  const root = document.getElementById('panelRoot');
+  const fns = {
+    home:renderHome, vistorias:renderVistorias, evolucao:renderEvolucao,
+    agendamentos:renderAgendamentos, transferencias:renderTransferencias,
+    conciliacao:renderConciliacao, relatorios:renderRelatorios, config:renderConfig
+  };
+  root.innerHTML = `<div class="panel">${fns[state.route]()}</div>`;
+  mountAnimatedNumbers(root);
+  afterRender[state.route] && afterRender[state.route](root);
+}
+const afterRender = {};
+const scheduleRender = debounce(()=>{ if(document.getElementById('panelRoot')) renderRoute(); }, 60);
+
+function openSidebar(){ state.ui.sidebarOpen=true; document.getElementById('sidebar').classList.add('open'); document.getElementById('sbBackdrop').classList.add('open'); }
+function closeSidebar(){ state.ui.sidebarOpen=false; document.getElementById('sidebar').classList.remove('open'); document.getElementById('sbBackdrop').classList.remove('open'); }
+
+/* =========================================================================
+   PANEL: HOME
+   ========================================================================= */
+function renderHome(){
+  const {start,end,prevStart,prevEnd} = resolvePeriod(state.ui.homePeriod);
+  const all = state.vistorias;
+  const cur = all.filter(v=>inRange(v.data,start,end) && v.status!=='pendente');
+  const prev = all.filter(v=>inRange(v.data,prevStart,prevEnd) && v.status!=='pendente');
+  const fatCur = sumValor(cur), fatPrev = sumValor(prev);
+  const qtdCur = cur.length, qtdPrev = prev.length;
+  const ticketCur = qtdCur? fatCur/qtdCur : 0;
+  const pendentes = all.filter(v=>v.status==='pendente').length;
+  const agAll = state.agendamentos;
+  const agComp = agAll.filter(a=>a.compareceu).length;
+  const taxaComparecimento = agAll.length? (agComp/agAll.length*100) : 0;
+
+  function delta(curV, prevV){
+    if(!prevV) return {cls:'flat', txt:'sem período anterior'};
+    const pct = (curV/prevV-1)*100;
+    return {cls: pct>=0?'up':'down', txt:`${pct>=0?'+':''}${pct.toFixed(1)}% vs período anterior`};
+  }
+  const dFat = delta(fatCur,fatPrev), dQtd = delta(qtdCur,qtdPrev);
+
+  // faturamento by month (last 6 months incl current)
+  const months = [];
+  for(let i=5;i>=0;i--){
+    const d = new Date(TODAY.getFullYear(), TODAY.getMonth()-i, 1);
+    months.push({ano:d.getFullYear(), mesNum:d.getMonth()+1, label:MESES_ABREV[d.getMonth()]});
+  }
+  const monthlyData = months.map(m=>{
+    const live = getMonthFromVistorias(m.ano,m.mesNum);
+    let value;
+    if(live.length) value = sumValor(vistoriasConcluidas(live));
+    else { const doc = state.evolucao.find(e=>e.ano===m.ano&&e.mesNum===m.mesNum); value = doc? (doc.faturamentoGoogle+doc.faturamentoParticular+doc.faturamentoParceiros):0; }
+    return {label:m.label, value};
+  });
+
+  // canal distribution (current period)
+  const canalTotals = {google:0,particular:0,parceiro:0};
+  cur.forEach(v=>{ const c=v.canal||inferCanal(v.cliente); canalTotals[c]=(canalTotals[c]||0)+(Number(v.valor)||0); });
+  const canalData = Object.keys(canalTotals).map(c=>({label:CANAL_LABEL[c], value:canalTotals[c], color:CANAL_COLOR[c]})).filter(d=>d.value>0);
+
+  // top clients
+  const byClient = {};
+  cur.forEach(v=>{ byClient[v.cliente]=(byClient[v.cliente]||0)+(Number(v.valor)||0); });
+  const topClients = Object.entries(byClient).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v],i)=>({label:k,value:v,color:['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)'][i]}));
+
+  // tipos
+  const byTipo = {};
+  cur.forEach(v=>{ byTipo[v.tipo]=(byTipo[v.tipo]||0)+1; });
+  const tipoEntries = Object.entries(byTipo).sort((a,b)=>b[1]-a[1]);
+  const topTipos = tipoEntries.slice(0,5);
+  const outrosTipo = tipoEntries.slice(5).reduce((s,[,c])=>s+c,0);
+  const tipoColors = ['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--muted)'];
+  const tipoData = topTipos.map(([k,v],i)=>({label:k,value:v,color:tipoColors[i]}));
+  if(outrosTipo>0) tipoData.push({label:'Outros',value:outrosTipo,color:tipoColors[5]});
+
+  // upcoming agendamentos
+  const upcoming = [...agAll].filter(a=>!a.compareceu).sort((a,b)=>(a.data||'').localeCompare(b.data||'')).slice(0,5);
+
+  return `
+  <div class="panel-header">
+    <div><h2>Visão Geral</h2><p>Resumo de desempenho em tempo real de todos os painéis</p></div>
+    <div class="filters">
+      ${periodSelect('homePeriod', state.ui.homePeriod)}
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="card stat">
+      <div class="stat-label">Faturamento no período</div>
+      <div class="stat-value" data-count="${fatCur}" data-fmt="money">R$ 0</div>
+      <div class="stat-delta ${dFat.cls}">${arrowFor(dFat.cls)} ${dFat.txt}</div>
+    </div>
+    <div class="card stat">
+      <div class="stat-label">Vistorias realizadas</div>
+      <div class="stat-value" data-count="${qtdCur}" data-fmt="int">0</div>
+      <div class="stat-delta ${dQtd.cls}">${arrowFor(dQtd.cls)} ${dQtd.txt}</div>
+    </div>
+    <div class="card stat">
+      <div class="stat-label">Ticket médio</div>
+      <div class="stat-value" data-count="${ticketCur}" data-fmt="money">R$ 0</div>
+      <div class="stat-delta flat">por vistoria concluída</div>
+    </div>
+    <div class="card stat">
+      <div class="stat-label">Taxa de comparecimento</div>
+      <div class="stat-value" data-count="${taxaComparecimento}" data-fmt="int">0</div>
+      <div class="stat-delta flat">${agComp} de ${agAll.length} agendamentos · ${pendentes} vistorias pendentes</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card chart-card">
+      <h3>Faturamento mensal</h3>
+      <div class="chart-sub">Últimos 6 meses · concluído + histórico</div>
+      ${barChart({data:monthlyData})}
+    </div>
+    <div class="card chart-card" style="display:flex;flex-direction:column;align-items:center;">
+      <h3 style="align-self:flex-start;">Faturamento por canal</h3>
+      <div class="chart-sub" style="align-self:flex-start;">No período selecionado</div>
+      ${canalData.length? donutChart({data:canalData}) : emptyState('Sem dados no período')}
+      ${canalData.length? legendRow(canalData):''}
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top:14px;">
+    <div class="card chart-card">
+      <h3>Top 5 clientes</h3>
+      <div class="chart-sub">Por faturamento no período</div>
+      ${topClients.length? hBarList({data:topClients}) : emptyState('Sem dados no período')}
+    </div>
+    <div class="card chart-card" style="display:flex;flex-direction:column;align-items:center;">
+      <h3 style="align-self:flex-start;">Tipos de vistoria</h3>
+      <div class="chart-sub" style="align-self:flex-start;">Distribuição no período</div>
+      ${tipoData.length? donutChart({data:tipoData, fmt:fmtCompact}) : emptyState('Sem dados no período')}
+      ${tipoData.length? legendRow(tipoData):''}
+    </div>
+  </div>
+
+  <div class="card chart-card" style="margin-top:14px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div><h3>Próximos agendamentos</h3><div class="chart-sub">Ainda sem confirmação de comparecimento</div></div>
+      <button class="btn btn-sm btn-ghost" data-route-link="agendamentos">Ver todos ${icon('arrowRight')}</button>
+    </div>
+    ${upcoming.length? `<div class="mini-list" style="margin-top:6px;">${upcoming.map(a=>`
+      <div class="mini-row">
+        <span class="avatar-dot" style="background:var(--c1)"></span>
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:13px;">${escapeHtml(a.nome||'Sem nome')} <span style="color:var(--muted);font-weight:400;">· ${escapeHtml(a.tipo||'')}</span></div>
+          <div style="font-size:11.5px;color:var(--muted);">${fmtDateBR(a.data)} · ${escapeHtml(a.veiculo||'')} ${a.placa?('· '+escapeHtml(a.placa)):''}</div>
+        </div>
+        <span class="mono" style="font-weight:600;">${fmtMoney(a.valor)}</span>
+      </div>`).join('')}</div>` : emptyState('Nenhum agendamento pendente de confirmação')}
+  </div>
+  `;
+}
+function arrowFor(cls){ return cls==='up'?'▲':cls==='down'?'▼':'—'; }
+function periodSelect(name,value){
+  const opts = [['mes-atual','Mês atual'],['30d','Últimos 30 dias'],['90d','Últimos 90 dias'],['ano','Este ano'],['tudo','Todo o período']];
+  return `<div class="field"><label>Período</label><select data-period-select="${name}">${opts.map(([v,l])=>`<option value="${v}" ${v===value?'selected':''}>${l}</option>`).join('')}</select></div>`;
+}
+function emptyState(msg){ return `<div class="empty-state">${icon('info')}<div>${escapeHtml(msg)}</div></div>`; }
+
+afterRender.home = (root)=>{
+  root.querySelector('[data-period-select="homePeriod"]').addEventListener('change', e=>{ state.ui.homePeriod=e.target.value; renderRoute(); });
+  root.querySelectorAll('[data-route-link]').forEach(b=>b.addEventListener('click', ()=>setRoute(b.dataset.routeLink)));
+};
+
+/* =========================================================================
+   PANEL: VISTORIAS
+   ========================================================================= */
+function filteredVistorias(){
+  const f = state.ui.vistoriasFilters;
+  let list = [...state.vistorias];
+  if(f.periodo!=='todos'){ const {start,end}=resolvePeriod(f.periodo==='mes-atual'?'mes-atual':f.periodo); list = list.filter(v=>inRange(v.data,start,end)); }
+  if(f.tipo) list = list.filter(v=>v.tipo===f.tipo);
+  if(f.forma) list = list.filter(v=>v.formaPagamento===f.forma);
+  if(f.canal) list = list.filter(v=>(v.canal||inferCanal(v.cliente))===f.canal);
+  if(f.status) list = list.filter(v=>(v.status||'concluida')===f.status);
+  if(f.busca){ const q=f.busca.toLowerCase(); list = list.filter(v=> (v.placa||'').toLowerCase().includes(q) || (v.cliente||'').toLowerCase().includes(q) || (v.veiculo||'').toLowerCase().includes(q)); }
+  return list.sort((a,b)=> (b.data||'').localeCompare(a.data||''));
+}
+
+function renderVistorias(){
+  const list = filteredVistorias();
+  const total = sumValor(list), qtd = list.length, ticket = qtd?total/qtd:0;
+  const pageSize=25, pages=Math.max(1,Math.ceil(list.length/pageSize));
+  state.ui.vistoriasPage = Math.min(state.ui.vistoriasPage, pages);
+  const pageItems = list.slice((state.ui.vistoriasPage-1)*pageSize, state.ui.vistoriasPage*pageSize);
+
+  const byForma = {}; list.forEach(v=>{ byForma[v.formaPagamento]=(byForma[v.formaPagamento]||0)+(Number(v.valor)||0); });
+  const formaColors=['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)','var(--c7)','var(--c8)'];
+  const formaData = Object.entries(byForma).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>({label:k,value:v,color:formaColors[i%formaColors.length]}));
+
+  const tipos = state.config.tiposVistoria, formas = state.config.formasPagamento;
+
+  return `
+  <div class="panel-header">
+    <div><h2>Vistorias</h2><p>${qtd} registros · ${fmtMoney(total)} no filtro atual</p></div>
+    <div class="panel-actions">
+      <button class="btn" data-action="export-excel-vistorias">${icon('download')} Excel</button>
+      <button class="btn" data-action="export-pdf-vistorias">${icon('download')} PDF</button>
+      <button class="btn btn-primary" data-action="open-vistoria-drawer">${icon('plus')} Nova vistoria</button>
+    </div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="card stat"><div class="stat-label">Faturamento filtrado</div><div class="stat-value" data-count="${total}" data-fmt="money">R$0</div></div>
+    <div class="card stat"><div class="stat-label">Vistorias</div><div class="stat-value" data-count="${qtd}" data-fmt="int">0</div></div>
+    <div class="card stat"><div class="stat-label">Ticket médio</div><div class="stat-value" data-count="${ticket}" data-fmt="money">R$0</div></div>
+  </div>
+
+  <div class="card" style="padding:14px 16px;margin-bottom:14px;">
+    <div class="filters">
+      <div class="field"><label>Período</label>
+        <select data-filter="periodo">
+          <option value="todos" ${state.ui.vistoriasFilters.periodo==='todos'?'selected':''}>Todos</option>
+          <option value="mes-atual" ${state.ui.vistoriasFilters.periodo==='mes-atual'?'selected':''}>Mês atual</option>
+          <option value="30d" ${state.ui.vistoriasFilters.periodo==='30d'?'selected':''}>Últimos 30 dias</option>
+          <option value="90d" ${state.ui.vistoriasFilters.periodo==='90d'?'selected':''}>Últimos 90 dias</option>
+          <option value="ano" ${state.ui.vistoriasFilters.periodo==='ano'?'selected':''}>Este ano</option>
+        </select>
+      </div>
+      <div class="field"><label>Tipo</label><select data-filter="tipo"><option value="">Todos</option>${tipos.map(t=>`<option ${t===state.ui.vistoriasFilters.tipo?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select></div>
+      <div class="field"><label>Pagamento</label><select data-filter="forma"><option value="">Todas</option>${formas.map(t=>`<option ${t===state.ui.vistoriasFilters.forma?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select></div>
+      <div class="field"><label>Canal</label><select data-filter="canal"><option value="">Todos</option>${Object.entries(CANAL_LABEL).map(([k,l])=>`<option value="${k}" ${k===state.ui.vistoriasFilters.canal?'selected':''}>${l}</option>`).join('')}</select></div>
+      <div class="field"><label>Status</label><select data-filter="status"><option value="">Todos</option><option value="concluida" ${state.ui.vistoriasFilters.status==='concluida'?'selected':''}>Concluída</option><option value="pendente" ${state.ui.vistoriasFilters.status==='pendente'?'selected':''}>Pendente</option></select></div>
+      <div class="field"><label>Buscar</label><div class="search-wrap">${icon('search')}<input class="input" data-filter="busca" placeholder="placa, cliente, veículo" value="${escapeHtml(state.ui.vistoriasFilters.busca)}"></div></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:14px;">
+    <div class="card chart-card"><h3>Faturamento por forma de pagamento</h3><div class="chart-sub">Filtro atual</div>${formaData.length?barChart({data:formaData}):emptyState('Sem dados')}</div>
+    <div class="card chart-card" style="display:flex;flex-direction:column;align-items:center;"><h3 style="align-self:flex-start;">Formas de pagamento</h3><div class="chart-sub" style="align-self:flex-start;">Distribuição</div>${formaData.length?donutChart({data:formaData}):emptyState('Sem dados')}${formaData.length?legendRow(formaData):''}</div>
+  </div>
+
+  <div class="card">
+    <div class="table-scroll"><table>
+      <thead><tr><th>Data</th><th>Placa</th><th>Veículo</th><th>Cliente</th><th>Tipo</th><th>Pagamento</th><th>Valor</th><th>NF</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        ${pageItems.length?pageItems.map(v=>`
+        <tr class="clickable" data-edit-vistoria="${v.id}">
+          <td>${fmtDateBR(v.data)}</td>
+          <td class="td-strong">${escapeHtml(v.placa)}</td>
+          <td>${escapeHtml(v.veiculo)}</td>
+          <td>${escapeHtml(v.cliente)}</td>
+          <td>${escapeHtml(v.tipo)}</td>
+          <td>${escapeHtml(v.formaPagamento)}</td>
+          <td class="td-strong">${fmtMoney(v.valor)}</td>
+          <td>${v.notaFiscal==='OK'?`<span class="pill pill-good">${icon('check')} OK</span>`:`<span class="pill pill-muted">—</span>`}</td>
+          <td>${v.status==='pendente'?`<span class="pill pill-warn">Pendente</span>`:`<span class="pill pill-good">Concluída</span>`}</td>
+          <td><div class="row-actions"><button class="icon-btn" data-delete-vistoria="${v.id}" onclick="event.stopPropagation()">${icon('trash')}</button></div></td>
+        </tr>`).join(''):`<tr><td colspan="10">${emptyState('Nenhuma vistoria encontrada com os filtros atuais')}</td></tr>`}
+      </tbody>
+    </table></div>
+    ${list.length>pageSize?`<div class="pagination">
+      <span>Página ${state.ui.vistoriasPage} de ${pages}</span>
+      <button class="btn btn-sm" data-page-vist="prev" ${state.ui.vistoriasPage<=1?'disabled':''}>Anterior</button>
+      <button class="btn btn-sm" data-page-vist="next" ${state.ui.vistoriasPage>=pages?'disabled':''}>Próxima</button>
+    </div>`:''}
+  </div>
+  `;
+}
+afterRender.vistorias = (root)=>{
+  root.querySelectorAll('[data-filter]').forEach(el=>{
+    el.addEventListener(el.tagName==='SELECT'?'change':'input', debounce(e=>{
+      state.ui.vistoriasFilters[el.dataset.filter]=e.target.value; state.ui.vistoriasPage=1; renderRoute();
+      // refocus search field after re-render
+      if(el.dataset.filter==='busca'){ requestAnimationFrame(()=>{ const i=document.querySelector('[data-filter="busca"]'); if(i){ i.focus(); i.selectionStart=i.selectionEnd=i.value.length; } }); }
+    }, el.dataset.filter==='busca'?250:0));
+  });
+  root.querySelectorAll('[data-page-vist]').forEach(b=>b.addEventListener('click',()=>{ state.ui.vistoriasPage += b.dataset.pageVist==='next'?1:-1; renderRoute(); }));
+  root.querySelectorAll('[data-edit-vistoria]').forEach(tr=>tr.addEventListener('click',()=>openVistoriaDrawer(state.vistorias.find(v=>v.id===tr.dataset.editVistoria))));
+  root.querySelectorAll('[data-delete-vistoria]').forEach(b=>b.addEventListener('click',()=>confirmDialog('Excluir esta vistoria?', ()=>deleteDoc('vistorias', b.dataset.deleteVistoria))));
+  const be = root.querySelector('[data-action="export-excel-vistorias"]'); be && be.addEventListener('click', ()=>exportExcel('vistorias', filteredVistorias()));
+  const bp = root.querySelector('[data-action="export-pdf-vistorias"]'); bp && bp.addEventListener('click', ()=>exportPDF('vistorias', filteredVistorias()));
+};
+
+/* =========================================================================
+   PANEL: EVOLUÇÃO
+   ========================================================================= */
+function renderEvolucao(){
+  const rows = evoSorted().map(getEvoRow);
+  const labels = rows.map(r=>MESES_ABREV[r.mesNum-1]+'/'+String(r.ano).slice(2));
+  const stackedData = rows.map((r,i)=>({label:labels[i], google:r.faturamentoGoogle, particular:r.faturamentoParticular, parceiro:r.faturamentoParceiros}));
+  const lastRow = rows[rows.length-1] || {};
+  const totalFatMes = (lastRow.faturamentoGoogle||0)+(lastRow.faturamentoParticular||0)+(lastRow.faturamentoParceiros||0);
+  const roiGoogle = lastRow.investimentoGoogle? ((lastRow.faturamentoGoogle/lastRow.investimentoGoogle)-1)*100 : 0;
+  const taxaConv = lastRow.cliques? (lastRow.conversoes/lastRow.cliques*100):0;
+
+  const funnelSteps = [
+    {label:'Visualizações', value:lastRow.visualizacoes||0},
+    {label:'Cliques', value:lastRow.cliques||0},
+    {label:'Conversões', value:lastRow.conversoes||0},
+  ];
+  const roiSeries = [
+    {name:'ROI Google', color:'var(--c1)', points: rows.map(r=> r.investimentoGoogle? ((r.faturamentoGoogle/r.investimentoGoogle)-1)*100 : 0)},
+  ];
+
+  return `
+  <div class="panel-header">
+    <div><h2>Evolução & Marketing</h2><p>Faturamento por canal e desempenho de mídia paga · ${lastRow.mes||''}/${lastRow.ano||''}</p></div>
+    <div class="panel-actions"><button class="btn btn-primary" data-action="open-evo-drawer">${icon('plus')} Registrar mês</button></div>
+  </div>
+
+  <div class="kpi-row">
+    <div class="card stat"><div class="stat-label">Faturamento do mês <span class="source-badge ${lastRow.source}">${lastRow.source==='auto'?'auto':'manual'}</span></div><div class="stat-value" data-count="${totalFatMes}" data-fmt="money">R$0</div></div>
+    <div class="card stat"><div class="stat-label">Investimento em Google Ads</div><div class="stat-value" data-count="${lastRow.investimentoGoogle||0}" data-fmt="money">R$0</div></div>
+    <div class="card stat"><div class="stat-label">ROI Google Ads</div><div class="stat-value" data-count="${roiGoogle}" data-fmt="int">0</div><div class="stat-delta flat">retorno em %</div></div>
+    <div class="card stat"><div class="stat-label">Taxa de conversão</div><div class="stat-value" data-count="${taxaConv}" data-fmt="int">0</div><div class="stat-delta flat">cliques → conversões</div></div>
+  </div>
+
+  <div class="card chart-card" style="margin-bottom:14px;">
+    <h3>Faturamento por canal</h3><div class="chart-sub">Google Ads · Particular · Parceiros — últimos ${rows.length} meses</div>
+    ${stackedBarChart({data:stackedData, keys:['google','particular','parceiro'], colors:['var(--c1)','var(--c2)','var(--c3)']})}
+    ${legendRow([{label:'Google Ads',color:'var(--c1)'},{label:'Particular',color:'var(--c2)'},{label:'Parceiros',color:'var(--c3)'}])}
+  </div>
+
+  <div class="grid-2" style="margin-bottom:14px;">
+    <div class="card chart-card"><h3>Funil de mídia (Google Ads)</h3><div class="chart-sub">${lastRow.mes||''}/${lastRow.ano||''}</div>${funnelChart({steps:funnelSteps})}</div>
+    <div class="card chart-card"><h3>ROI Google Ads</h3><div class="chart-sub">Variação percentual mês a mês</div>${lineChart({series:roiSeries, labels, fmt:v=>v.toFixed(0)+'%'})}</div>
+  </div>
+
+  <div class="card">
+    <div class="table-scroll"><table>
+      <thead><tr><th>Mês</th><th>Faturamento</th><th>Investimento</th><th>Visualizações</th><th>Cliques</th><th>Conversões</th><th>Custo/conversão</th><th></th></tr></thead>
+      <tbody>
+        ${rows.map(r=>{
+          const fat=(r.faturamentoGoogle||0)+(r.faturamentoParticular||0)+(r.faturamentoParceiros||0);
+          return `<tr>
+          <td class="td-strong">${r.mes}/${r.ano} <span class="source-badge ${r.source}">${r.source==='auto'?'auto':'manual'}</span></td>
+          <td>${fmtMoney(fat)}</td>
+          <td>${fmtMoney(r.investimentoGoogle)}</td>
+          <td>${fmtCompact(r.visualizacoes)}</td>
+          <td>${fmtCompact(r.cliques)}</td>
+          <td>${fmtCompact(r.conversoes)}</td>
+          <td>${fmtMoney(r.custoPorConversao)}</td>
+          <td><button class="icon-btn" data-edit-evo="${r.ano}-${pad2(r.mesNum)}">${icon('edit')}</button></td>
+        </tr>`;}).join('')}
+      </tbody>
+    </table></div>
+  </div>
+  `;
+}
+afterRender.evolucao = (root)=>{
+  const b = root.querySelector('[data-action="open-evo-drawer"]'); b && b.addEventListener('click', ()=>openEvoDrawer(null));
+  root.querySelectorAll('[data-edit-evo]').forEach(btn=>btn.addEventListener('click',()=>openEvoDrawer(state.evolucao.find(e=>monthKey(e.ano,e.mesNum)===btn.dataset.editEvo))));
+};
+
+/* =========================================================================
+   PANEL: AGENDAMENTOS
+   ========================================================================= */
+function renderAgendamentos(){
+  const list = [...state.agendamentos].sort((a,b)=>(a.data||'').localeCompare(b.data||''));
+  const hoje = todayISO();
+  const hojeCount = list.filter(a=>a.data===hoje).length;
+  const semana = list.filter(a=>{ const d=parseISODate(a.data); return d && d>=new Date(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate()) && d<addDays(TODAY,7); }).length;
+  const taxa = list.length? (list.filter(a=>a.compareceu).length/list.length*100):0;
+
+  return `
+  <div class="panel-header">
+    <div><h2>Agendamentos</h2><p>${list.length} registros · confirme comparecimento para gerar a vistoria automaticamente</p></div>
+    <div class="panel-actions"><button class="btn btn-primary" data-action="open-agenda-drawer">${icon('plus')} Novo agendamento</button></div>
+  </div>
+  <div class="kpi-row">
+    <div class="card stat"><div class="stat-label">Hoje</div><div class="stat-value" data-count="${hojeCount}" data-fmt="int">0</div></div>
+    <div class="card stat"><div class="stat-label">Próximos 7 dias</div><div class="stat-value" data-count="${semana}" data-fmt="int">0</div></div>
+    <div class="card stat"><div class="stat-label">Taxa de comparecimento</div><div class="stat-value" data-count="${taxa}" data-fmt="int">0</div></div>
+  </div>
+  <div class="mini-list" style="display:flex;flex-direction:column;gap:10px;">
+    ${list.length?list.map(a=>`
+    <div class="card" style="padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div style="min-width:78px;">
+        <div style="font-family:'Outfit';font-weight:700;font-size:15px;">${fmtDateBR(a.data)}</div>
+        <div style="font-size:11px;color:var(--muted);">${escapeHtml(a.horario||'')}</div>
+      </div>
+      <div style="flex:1;min-width:180px;">
+        <div style="font-weight:600;">${escapeHtml(a.nome||'Sem nome')} <span style="font-weight:400;color:var(--muted);">· ${escapeHtml(a.tipo||'')}</span></div>
+        <div style="font-size:12px;color:var(--text-2);">${icon('car','')} ${escapeHtml(a.veiculo||'')} ${a.placa?('· '+escapeHtml(a.placa)):''}</div>
+        ${a.observacao?`<div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${escapeHtml(a.observacao)}</div>`:''}
+      </div>
+      <div style="font-weight:700;font-family:'Outfit';">${fmtMoney(a.valor)}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        ${a.contato?`<a class="btn btn-sm btn-ghost" href="https://wa.me/55${(a.contato||'').replace(/\\D/g,'')}" target="_blank" rel="noopener">${icon('phone')} Contato</a>`:''}
+        <span class="pill ${a.abertaNoSistema?'pill-good':'pill-muted'}">${a.abertaNoSistema?'Aberta no sistema':'Não aberta'}</span>
+        <span class="pill ${a.compareceu?'pill-good':'pill-warn'}" data-toggle-compareceu="${a.id}" style="cursor:pointer;">${a.compareceu?'Compareceu':'Aguardando'}</span>
+      </div>
+      <div class="row-actions">
+        ${a.compareceu?`<button class="btn btn-sm btn-accent" data-convert-agenda="${a.id}">Registrar vistoria ${icon('arrowRight')}</button>`:''}
+        <button class="icon-btn" data-delete-agenda="${a.id}">${icon('trash')}</button>
+      </div>
+    </div>`).join(''):`<div class="card">${emptyState('Nenhum agendamento cadastrado')}</div>`}
+  </div>
+  `;
+}
+afterRender.agendamentos = (root)=>{
+  const b = root.querySelector('[data-action="open-agenda-drawer"]'); b && b.addEventListener('click', ()=>openAgendaDrawer(null));
+  root.querySelectorAll('[data-toggle-compareceu]').forEach(el=>el.addEventListener('click',()=>{
+    const a = state.agendamentos.find(x=>x.id===el.dataset.toggleCompareceu);
+    updateDoc('agendamentos', a.id, {compareceu: !a.compareceu});
+  }));
+  root.querySelectorAll('[data-convert-agenda]').forEach(el=>el.addEventListener('click',()=>{
+    const a = state.agendamentos.find(x=>x.id===el.dataset.convertAgenda);
+    openVistoriaDrawer(null, {data:a.data, placa:a.placa, veiculo:a.veiculo, cliente:a.nome, valor:a.valor, tipo:a.tipo});
+  }));
+  root.querySelectorAll('[data-delete-agenda]').forEach(el=>el.addEventListener('click',()=>confirmDialog('Excluir este agendamento?', ()=>deleteDoc('agendamentos', el.dataset.deleteAgenda))));
+};
+
+/* =========================================================================
+   PANEL: TRANSFERÊNCIAS
+   ========================================================================= */
+function renderTransferencias(){
+  const list = [...state.transferencias];
+  const totalReceb = list.reduce((s,t)=>s+(Number(t.recebido)||0),0);
+  const totalPago = list.reduce((s,t)=>s+(Number(t.pago)||0),0);
+  const margem = totalReceb-totalPago;
+  const byDesp = {};
+  list.forEach(t=>{ const k=t.despachante||'—'; byDesp[k]=byDesp[k]||{recebido:0,pago:0}; byDesp[k].recebido+=Number(t.recebido)||0; byDesp[k].pago+=Number(t.pago)||0; });
+  const despData = Object.entries(byDesp).map(([k,v])=>({label:k,recebido:v.recebido,pago:v.pago}));
+
+  const pageSize=25, pages=Math.max(1,Math.ceil(list.length/pageSize));
+  state.ui.transfPage = Math.min(state.ui.transfPage,pages);
+  const items = [...list].slice((state.ui.transfPage-1)*pageSize, state.ui.transfPage*pageSize);
+
+  return `
+  <div class="panel-header">
+    <div><h2>Transferências & Remarcações</h2><p>${list.length} registros via despachante</p></div>
+    <div class="panel-actions"><button class="btn btn-primary" data-action="open-transf-drawer">${icon('plus')} Nova transferência</button></div>
+  </div>
+  <div class="kpi-row">
+    <div class="card stat"><div class="stat-label">Total recebido</div><div class="stat-value" data-count="${totalReceb}" data-fmt="money">R$0</div></div>
+    <div class="card stat"><div class="stat-label">Total repassado</div><div class="stat-value" data-count="${totalPago}" data-fmt="money">R$0</div></div>
+    <div class="card stat"><div class="stat-label">Margem</div><div class="stat-value" data-count="${margem}" data-fmt="money">R$0</div></div>
+  </div>
+  <div class="card chart-card" style="margin-bottom:14px;">
+    <h3>Recebido vs. repassado por despachante</h3><div class="chart-sub">Comparativo total</div>
+    ${stackedBarChart({data:despData.map(d=>({label:d.label, recebido:d.recebido, pago:0})).concat([]), keys:['recebido'], colors:['var(--c1)']})}
+    <div style="margin-top:-8px;">${legendRow([{label:'Recebido',color:'var(--c1)'}])}</div>
+  </div>
+  <div class="card">
+    <div class="table-scroll"><table>
+      <thead><tr><th>Placa</th><th>Veículo</th><th>Despachante</th><th>Recebido</th><th>Repassado</th><th>Saldo</th><th></th></tr></thead>
+      <tbody>
+        ${items.length?items.map(t=>`<tr>
+          <td class="td-strong">${escapeHtml(t.placa)}</td>
+          <td>${escapeHtml(t.veiculo)}</td>
+          <td>${escapeHtml(t.despachante)}</td>
+          <td>${fmtMoney(t.recebido)}</td>
+          <td>${fmtMoney(t.pago)}</td>
+          <td class="td-strong">${fmtMoney((t.recebido||0)-(t.pago||0))}</td>
+          <td><button class="icon-btn" data-delete-transf="${t.id}">${icon('trash')}</button></td>
+        </tr>`).join(''):`<tr><td colspan="7">${emptyState('Nenhuma transferência cadastrada')}</td></tr>`}
+      </tbody>
+    </table></div>
+    ${list.length>pageSize?`<div class="pagination"><span>Página ${state.ui.transfPage} de ${pages}</span>
+      <button class="btn btn-sm" data-page-transf="prev" ${state.ui.transfPage<=1?'disabled':''}>Anterior</button>
+      <button class="btn btn-sm" data-page-transf="next" ${state.ui.transfPage>=pages?'disabled':''}>Próxima</button></div>`:''}
+  </div>
+  `;
+}
+afterRender.transferencias = (root)=>{
+  const b = root.querySelector('[data-action="open-transf-drawer"]'); b && b.addEventListener('click', openTransfDrawer);
+  root.querySelectorAll('[data-page-transf]').forEach(btn=>btn.addEventListener('click',()=>{ state.ui.transfPage += btn.dataset.pageTransf==='next'?1:-1; renderRoute(); }));
+  root.querySelectorAll('[data-delete-transf]').forEach(el=>el.addEventListener('click',()=>confirmDialog('Excluir esta transferência?', ()=>deleteDoc('transferencias', el.dataset.deleteTransf))));
+};
+
+/* =========================================================================
+   PANEL: CONCILIAÇÃO DE CARTÕES
+   ========================================================================= */
+const CONC_COLS = [
+  {key:'latam', label:'Cartão Latam', color:'var(--c1)'},
+  {key:'santanderDebito', label:'Santander/C6 · Débito', color:'var(--c2)'},
+  {key:'santanderCredito', label:'Santander/C6 · Crédito', color:'var(--c3)'},
+];
+function renderConciliacao(){
+  const c = state.conciliacao;
+  const totalGeral = CONC_COLS.reduce((s,col)=>s+(c[col.key]||[]).reduce((a,b)=>a+b,0),0);
+  return `
+  <div class="panel-header"><div><h2>Conciliação de Cartões</h2><p>Conferência de repasses por maquineta</p></div></div>
+  <div class="kpi-row"><div class="card stat"><div class="stat-label">Total geral conferido</div><div class="stat-value" data-count="${totalGeral}" data-fmt="money">R$0</div></div></div>
+  <div class="grid-3">
+    ${CONC_COLS.map(col=>{
+      const vals = c[col.key]||[];
+      const total = vals.reduce((a,b)=>a+b,0);
+      return `<div class="card" style="padding:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="avatar-dot" style="background:${col.color}"></span><h3 style="margin:0;font-size:14px;">${col.label}</h3></div>
+        <div class="stat-value" data-count="${total}" data-fmt="money" style="margin:6px 0 12px;">R$0</div>
+        <div class="mini-list" style="max-height:220px;overflow-y:auto;">
+          ${vals.length?vals.map((v,i)=>`<div class="mini-row"><span class="mono" style="flex:1;">${fmtMoney(v)}</span><button class="icon-btn" data-del-conc="${col.key}:${i}">${icon('trash')}</button></div>`).join(''):emptyState('Sem lançamentos')}
+        </div>
+        <div class="tag-add"><input class="input" type="number" step="0.01" placeholder="R$ 0,00" data-conc-input="${col.key}"><button class="btn btn-sm btn-primary" data-add-conc="${col.key}">${icon('plus')}</button></div>
+      </div>`;
+    }).join('')}
+  </div>
+  `;
+}
+afterRender.conciliacao = (root)=>{
+  root.querySelectorAll('[data-add-conc]').forEach(btn=>{
+    const key = btn.dataset.addConc;
+    const doAdd = ()=>{
+      const input = root.querySelector(`[data-conc-input="${key}"]`);
+      const v = parseFloat(input.value);
+      if(!v || v<=0) return;
+      const arr = [...(state.conciliacao[key]||[]), v];
+      updateDoc('conciliacao','atual',{[key]:arr});
+    };
+    btn.addEventListener('click', doAdd);
+    root.querySelector(`[data-conc-input="${key}"]`).addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doAdd(); }});
+  });
+  root.querySelectorAll('[data-del-conc]').forEach(btn=>btn.addEventListener('click',()=>{
+    const [key,idx] = btn.dataset.delConc.split(':');
+    const arr = [...(state.conciliacao[key]||[])]; arr.splice(+idx,1);
+    updateDoc('conciliacao','atual',{[key]:arr});
+  }));
+};
+
+/* =========================================================================
+   PANEL: RELATÓRIOS
+   ========================================================================= */
+function renderRelatorios(){
+  const r = state.ui.relatorio;
+  const {start,end} = resolvePeriod(r.periodo);
+  let count=0, total=0, label='';
+  if(r.tipo==='vistorias'||r.tipo==='geral'){ const l = state.vistorias.filter(v=>inRange(v.data,start,end)); count=l.length; total=sumValor(l); }
+  return `
+  <div class="panel-header"><div><h2>Relatórios</h2><p>Gere relatórios em PDF ou planilhas Excel prontas para compartilhar</p></div></div>
+  <div class="grid-2">
+    <div class="card" style="padding:20px;">
+      <div class="form-row"><label>Tipo de relatório</label>
+        <select data-rel="tipo" class="input">
+          <option value="vistorias" ${r.tipo==='vistorias'?'selected':''}>Vistorias</option>
+          <option value="evolucao" ${r.tipo==='evolucao'?'selected':''}>Evolução & Marketing</option>
+          <option value="agendamentos" ${r.tipo==='agendamentos'?'selected':''}>Agendamentos</option>
+          <option value="transferencias" ${r.tipo==='transferencias'?'selected':''}>Transferências</option>
+          <option value="geral" ${r.tipo==='geral'?'selected':''}>Relatório geral (todos os painéis)</option>
+        </select>
+      </div>
+      <div class="form-row" style="margin-top:12px;"><label>Período</label>
+        <select data-rel="periodo" class="input">
+          <option value="mes-atual" ${r.periodo==='mes-atual'?'selected':''}>Mês atual</option>
+          <option value="30d" ${r.periodo==='30d'?'selected':''}>Últimos 30 dias</option>
+          <option value="90d" ${r.periodo==='90d'?'selected':''}>Últimos 90 dias</option>
+          <option value="ano" ${r.periodo==='ano'?'selected':''}>Este ano</option>
+          <option value="tudo" ${r.periodo==='tudo'?'selected':''}>Todo o período</option>
+        </select>
+      </div>
+      <div class="divider"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-primary" data-action="gen-pdf">${icon('download')} Baixar PDF</button>
+        <button class="btn btn-accent" data-action="gen-xlsx">${icon('download')} Baixar Excel</button>
+      </div>
+    </div>
+    <div class="card" style="padding:20px;">
+      <h3 style="margin-top:0;">Pré-visualização</h3>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:13.5px;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Registros no período</span><b class="mono">${count}</b></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Faturamento total</span><b class="mono">${fmtMoney(total)}</b></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-2);">Gerado em</span><b>${fmtDateBR(todayISO())}</b></div>
+      </div>
+      <div class="divider"></div>
+      <div class="chart-sub">O relatório inclui cabeçalho com a marca Visão Total, KPIs do período e a tabela detalhada de registros.</div>
+    </div>
+  </div>
+  `;
+}
+afterRender.relatorios = (root)=>{
+  root.querySelectorAll('[data-rel]').forEach(el=>el.addEventListener('change', e=>{ state.ui.relatorio[el.dataset.rel]=e.target.value; renderRoute(); }));
+  root.querySelector('[data-action="gen-pdf"]').addEventListener('click', ()=>generateReportPDF(state.ui.relatorio.tipo, state.ui.relatorio.periodo));
+  root.querySelector('[data-action="gen-xlsx"]').addEventListener('click', ()=>generateReportExcel(state.ui.relatorio.tipo, state.ui.relatorio.periodo));
+};
+
+/* =========================================================================
+   PANEL: CONFIGURAÇÕES
+   ========================================================================= */
+function renderConfig(){
+  const cfg = state.config;
+  function tagBlock(title, field, hint){
+    return `<div class="card" style="padding:18px;">
+      <h3 style="margin:0;">${title}</h3><div class="chart-sub">${hint}</div>
+      <div class="tag-list" data-tag-list="${field}">${(cfg[field]||[]).map(t=>`<span class="tag">${escapeHtml(t)}<button data-remove-tag="${field}::${escapeHtml(t)}">${icon('x')}</button></span>`).join('')}</div>
+      <div class="tag-add"><input class="input" placeholder="Adicionar…" data-tag-input="${field}"><button class="btn btn-sm btn-primary" data-add-tag="${field}">${icon('plus')}</button></div>
+    </div>`;
+  }
+  return `
+  <div class="panel-header"><div><h2>Configurações</h2><p>Padrões usados nos formulários de toda a aplicação</p></div></div>
+  <div class="card" style="padding:18px;margin-bottom:14px;display:flex;align-items:center;gap:16px;">
+    <img src="${document.getElementById('brandLogo').src}" alt="" style="width:56px;height:56px;object-fit:contain;background:var(--surface-2);border-radius:12px;padding:6px;">
+    <div><div style="font-weight:700;font-family:'Outfit';font-size:16px;">${escapeHtml(cfg.empresa.nome||'Visão Total Vistorias')}</div><div style="color:var(--muted);font-size:12.5px;">Identidade visual aplicada a painéis e relatórios em PDF</div></div>
+  </div>
+  <div class="grid-3">
+    ${tagBlock('Tipos de vistoria','tiposVistoria','Lista usada no formulário de vistorias')}
+    ${tagBlock('Formas de pagamento','formasPagamento','Lista usada no formulário de vistorias')}
+    ${tagBlock('Clientes frequentes','clientes','Sugestões de autocompletar no cadastro')}
+  </div>
+  `;
+}
+afterRender.config = (root)=>{
+  root.querySelectorAll('[data-add-tag]').forEach(btn=>{
+    const field = btn.dataset.addTag;
+    const doAdd = ()=>{
+      const input = root.querySelector(`[data-tag-input="${field}"]`);
+      const v = input.value.trim(); if(!v) return;
+      const arr = uniq([...(state.config[field]||[]), v]);
+      updateDoc('config','geral',{[field]:arr});
+      input.value='';
+    };
+    btn.addEventListener('click', doAdd);
+    root.querySelector(`[data-tag-input="${field}"]`).addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doAdd(); } });
+  });
+  root.querySelectorAll('[data-remove-tag]').forEach(btn=>btn.addEventListener('click', ()=>{
+    const [field,val] = btn.dataset.removeTag.split('::');
+    const arr = (state.config[field]||[]).filter(x=>x!==val);
+    updateDoc('config','geral',{[field]:arr});
+  }));
+};
+
+/* =========================================================================
+   DRAWER: shared open/close
+   ========================================================================= */
+function openDrawer(html, onMount){
+  const drawer = document.getElementById('drawer');
+  const backdrop = document.getElementById('drawerBackdrop');
+  drawer.innerHTML = html;
+  backdrop.classList.add('open'); drawer.classList.add('open');
+  onMount && onMount(drawer);
+  drawer.querySelectorAll('[data-close-drawer]').forEach(b=>b.addEventListener('click', closeDrawer));
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerBackdrop').classList.remove('open');
+}
+document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
+
+/* ---- Nova/editar vistoria ---- */
+function openVistoriaDrawer(existing, prefill){
+  const v = existing || Object.assign({
+    data: todayISO(), placa:'', veiculo:'', cliente:'', canal:'particular',
+    valor:'', tipo: state.config.tiposVistoria[0]||'ECV', formaPagamento: state.config.formasPagamento[0]||'PIX',
+    notaFiscal:'', status:'concluida', observacao:''
+  }, prefill||{});
+  if(prefill && !v.canal) v.canal = inferCanal(v.cliente);
+  const isEdit = !!existing;
+  const canalOpts = Object.entries(CANAL_LABEL);
+  openDrawer(`
+    <div class="drawer-head"><h3>${isEdit?'Editar vistoria':'Nova vistoria'}</h3><button class="icon-btn" data-close-drawer>${icon('x')}</button></div>
+    <div class="drawer-body">
+      <div class="form-2col">
+        <div class="form-row"><label>Data</label><input class="input" type="date" name="data" value="${v.data}"></div>
+        <div class="form-row"><label>Placa</label><input class="input" name="placa" style="text-transform:uppercase" maxlength="8" value="${escapeHtml(v.placa)}" placeholder="ABC1D23"></div>
+      </div>
+      <div class="form-row"><label>Veículo</label><input class="input" name="veiculo" value="${escapeHtml(v.veiculo)}" placeholder="Ex.: HYUNDAI HB20"></div>
+      <div class="form-row"><label>Cliente</label><input class="input" name="cliente" list="clientesList" value="${escapeHtml(v.cliente)}" placeholder="Nome do cliente ou parceiro"></div>
+      <datalist id="clientesList">${state.config.clientes.map(c=>`<option value="${escapeHtml(c)}">`).join('')}</datalist>
+      <div class="form-row"><label>Canal</label><div class="chip-select" data-chip-group="canal">${canalOpts.map(([k,l])=>`<span class="chip ${v.canal===k?'active':''}" data-chip-value="${k}">${l}</span>`).join('')}</div></div>
+      <div class="form-2col">
+        <div class="form-row"><label>Tipo de vistoria</label><select class="input" name="tipo">${state.config.tiposVistoria.map(t=>`<option ${t===v.tipo?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select></div>
+        <div class="form-row"><label>Forma de pagamento</label><select class="input" name="formaPagamento">${state.config.formasPagamento.map(t=>`<option ${t===v.formaPagamento?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select></div>
+      </div>
+      <div class="form-2col">
+        <div class="form-row"><label>Valor (R$)</label><input class="input" type="number" step="0.01" min="0" name="valor" value="${v.valor}"></div>
+        <div class="form-row"><label>Nota fiscal</label>
+          <div class="toggle-row"><span class="hint">Emitida</span><label class="switch"><input type="checkbox" name="notaFiscal" ${v.notaFiscal==='OK'?'checked':''}><span class="track"></span></label></div>
+        </div>
+      </div>
+      <div class="toggle-row"><div><label style="display:block;">Status</label><span class="hint">Marque como pendente se ainda não foi fechada</span></div>
+        <label class="switch"><input type="checkbox" name="status" ${v.status!=='pendente'?'checked':''}><span class="track"></span></label>
+      </div>
+      <div class="form-row"><label>Observação</label><textarea class="input" name="observacao" rows="2" style="resize:vertical;">${escapeHtml(v.observacao||'')}</textarea></div>
+    </div>
+    <div class="drawer-foot">
+      ${isEdit?`<button class="btn" data-close-drawer style="flex:1;">Cancelar</button><button class="btn btn-primary" data-save-vistoria style="flex:2;">Salvar alterações</button>`:`<button class="btn" data-close-drawer style="flex:1;">Cancelar</button><button class="btn btn-primary" data-save-vistoria style="flex:2;">${icon('plus')} Cadastrar vistoria</button>`}
+    </div>
+  `, drawer=>{
+    let canal = v.canal;
+    const placaInput = drawer.querySelector('[name="placa"]');
+    placaInput.addEventListener('input', e=>{ e.target.value = e.target.value.toUpperCase(); });
+    const clienteInput = drawer.querySelector('[name="cliente"]');
+    clienteInput.addEventListener('change', e=>{
+      canal = inferCanal(e.target.value);
+      drawer.querySelectorAll('[data-chip-value]').forEach(c=>c.classList.toggle('active', c.dataset.chipValue===canal));
+    });
+    drawer.querySelectorAll('[data-chip-value]').forEach(chip=>chip.addEventListener('click', ()=>{
+      canal = chip.dataset.chipValue;
+      drawer.querySelectorAll('[data-chip-value]').forEach(c=>c.classList.toggle('active', c===chip));
+    }));
+    drawer.querySelector('[data-save-vistoria]').addEventListener('click', ()=>{
+      const f = drawer;
+      const data = {
+        data: f.querySelector('[name="data"]').value || todayISO(),
+        placa: f.querySelector('[name="placa"]').value.trim().toUpperCase(),
+        veiculo: f.querySelector('[name="veiculo"]').value.trim(),
+        cliente: f.querySelector('[name="cliente"]').value.trim() || 'PARTICULAR',
+        canal,
+        tipo: f.querySelector('[name="tipo"]').value,
+        formaPagamento: f.querySelector('[name="formaPagamento"]').value,
+        valor: parseFloat(f.querySelector('[name="valor"]').value)||0,
+        notaFiscal: f.querySelector('[name="notaFiscal"]').checked?'OK':'',
+        status: f.querySelector('[name="status"]').checked?'concluida':'pendente',
+        observacao: f.querySelector('[name="observacao"]').value.trim(),
+      };
+      const d = parseISODate(data.data);
+      data.mes = MESES_PT[d.getMonth()]; data.ano = d.getFullYear();
+      if(!data.placa){ toast('Informe a placa do veículo','error'); return; }
+      if(isEdit) updateDoc('vistorias', existing.id, data); else addDoc('vistorias', data);
+      if(!state.config.clientes.includes(data.cliente)) updateDoc('config','geral',{clientes: uniq([...state.config.clientes, data.cliente])});
+      closeDrawer();
+      toast(isEdit?'Vistoria atualizada':'Vistoria cadastrada com sucesso');
+    });
+  });
+}
+
+/* ---- Novo agendamento ---- */
+function openAgendaDrawer(existing){
+  const a = existing || {data:todayISO(), horario:'', nome:'', contato:'', veiculo:'', placa:'', tipo:state.config.tiposVistoria[0]||'ECV', valor:'', abertaNoSistema:false, compareceu:false, observacao:''};
+  openDrawer(`
+    <div class="drawer-head"><h3>${existing?'Editar agendamento':'Novo agendamento'}</h3><button class="icon-btn" data-close-drawer>${icon('x')}</button></div>
+    <div class="drawer-body">
+      <div class="form-2col">
+        <div class="form-row"><label>Data</label><input class="input" type="date" name="data" value="${a.data}"></div>
+        <div class="form-row"><label>Horário / observação de horário</label><input class="input" name="horario" value="${escapeHtml(a.horario||'')}" placeholder="Ex.: 14:00"></div>
+      </div>
+      <div class="form-2col">
+        <div class="form-row"><label>Nome</label><input class="input" name="nome" value="${escapeHtml(a.nome)}"></div>
+        <div class="form-row"><label>Contato (WhatsApp)</label><input class="input" name="contato" value="${escapeHtml(a.contato)}" placeholder="49999998888"></div>
+      </div>
+      <div class="form-2col">
+        <div class="form-row"><label>Veículo</label><input class="input" name="veiculo" value="${escapeHtml(a.veiculo)}"></div>
+        <div class="form-row"><label>Placa</label><input class="input" name="placa" style="text-transform:uppercase" value="${escapeHtml(a.placa)}"></div>
+      </div>
+      <div class="form-2col">
+        <div class="form-row"><label>Tipo</label><select class="input" name="tipo">${state.config.tiposVistoria.map(t=>`<option ${t===a.tipo?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select></div>
+        <div class="form-row"><label>Valor (R$)</label><input class="input" type="number" step="0.01" name="valor" value="${a.valor}"></div>
+      </div>
+      <div class="toggle-row"><span>Aberta no sistema</span><label class="switch"><input type="checkbox" name="abertaNoSistema" ${a.abertaNoSistema?'checked':''}><span class="track"></span></label></div>
+      <div class="toggle-row"><span>Compareceu</span><label class="switch"><input type="checkbox" name="compareceu" ${a.compareceu?'checked':''}><span class="track"></span></label></div>
+      <div class="form-row"><label>Observação</label><textarea class="input" name="observacao" rows="2" style="resize:vertical;">${escapeHtml(a.observacao||'')}</textarea></div>
+    </div>
+    <div class="drawer-foot"><button class="btn" data-close-drawer style="flex:1;">Cancelar</button><button class="btn btn-primary" data-save-agenda style="flex:2;">${icon('plus')} Salvar</button></div>
+  `, drawer=>{
+    drawer.querySelector('[data-save-agenda]').addEventListener('click', ()=>{
+      const f = drawer;
+      const data = {
+        data:f.querySelector('[name="data"]').value, horario:f.querySelector('[name="horario"]').value.trim(),
+        nome:f.querySelector('[name="nome"]').value.trim(), contato:f.querySelector('[name="contato"]').value.trim(),
+        veiculo:f.querySelector('[name="veiculo"]').value.trim(), placa:f.querySelector('[name="placa"]').value.trim().toUpperCase(),
+        tipo:f.querySelector('[name="tipo"]').value, valor:parseFloat(f.querySelector('[name="valor"]').value)||0,
+        abertaNoSistema:f.querySelector('[name="abertaNoSistema"]').checked, compareceu:f.querySelector('[name="compareceu"]').checked,
+        observacao:f.querySelector('[name="observacao"]').value.trim(),
+      };
+      if(!data.nome){ toast('Informe o nome do cliente','error'); return; }
+      if(existing) updateDoc('agendamentos', existing.id, data); else addDoc('agendamentos', data);
+      closeDrawer(); toast(existing?'Agendamento atualizado':'Agendamento criado');
+    });
+  });
+}
+
+/* ---- Nova transferência ---- */
+function openTransfDrawer(){
+  openDrawer(`
+    <div class="drawer-head"><h3>Nova transferência</h3><button class="icon-btn" data-close-drawer>${icon('x')}</button></div>
+    <div class="drawer-body">
+      <div class="form-2col">
+        <div class="form-row"><label>Placa</label><input class="input" name="placa" style="text-transform:uppercase"></div>
+        <div class="form-row"><label>Veículo</label><input class="input" name="veiculo"></div>
+      </div>
+      <div class="form-row"><label>Despachante</label><input class="input" name="despachante" placeholder="Ex.: MAX, CONDUZA…"></div>
+      <div class="form-2col">
+        <div class="form-row"><label>Recebido (R$)</label><input class="input" type="number" step="0.01" name="recebido"></div>
+        <div class="form-row"><label>Repassado (R$)</label><input class="input" type="number" step="0.01" name="pago"></div>
+      </div>
+    </div>
+    <div class="drawer-foot"><button class="btn" data-close-drawer style="flex:1;">Cancelar</button><button class="btn btn-primary" data-save-transf style="flex:2;">${icon('plus')} Salvar</button></div>
+  `, drawer=>{
+    drawer.querySelector('[data-save-transf]').addEventListener('click', ()=>{
+      const f = drawer;
+      const data = { placa:f.querySelector('[name="placa"]').value.trim().toUpperCase(), veiculo:f.querySelector('[name="veiculo"]').value.trim(),
+        despachante:f.querySelector('[name="despachante"]').value.trim(), recebido:parseFloat(f.querySelector('[name="recebido"]').value)||0, pago:parseFloat(f.querySelector('[name="pago"]').value)||0 };
+      if(!data.placa){ toast('Informe a placa','error'); return; }
+      addDoc('transferencias', data); closeDrawer(); toast('Transferência registrada');
+    });
+  });
+}
+
+/* ---- Registrar/editar mês (Evolução) ---- */
+function openEvoDrawer(existing){
+  const now = new Date();
+  const e = existing || {ano:now.getFullYear(), mesNum:now.getMonth()+1, investimentoGoogle:0, visualizacoes:0, cliques:0, conversoes:0, custoPorConversao:0};
+  openDrawer(`
+    <div class="drawer-head"><h3>${existing?'Editar mês':'Registrar mês'}</h3><button class="icon-btn" data-close-drawer>${icon('x')}</button></div>
+    <div class="drawer-body">
+      <div class="form-2col">
+        <div class="form-row"><label>Mês</label><select class="input" name="mesNum" ${existing?'disabled':''}>${MESES_PT.map((m,i)=>`<option value="${i+1}" ${i+1===e.mesNum?'selected':''}>${m}</option>`).join('')}</select></div>
+        <div class="form-row"><label>Ano</label><input class="input" type="number" name="ano" value="${e.ano}" ${existing?'disabled':''}></div>
+      </div>
+      <div class="form-row"><label>Investimento Google Ads (R$)</label><input class="input" type="number" step="0.01" name="investimentoGoogle" value="${e.investimentoGoogle}"></div>
+      <div class="form-2col">
+        <div class="form-row"><label>Visualizações</label><input class="input" type="number" name="visualizacoes" value="${e.visualizacoes}"></div>
+        <div class="form-row"><label>Cliques</label><input class="input" type="number" name="cliques" value="${e.cliques}"></div>
+      </div>
+      <div class="form-2col">
+        <div class="form-row"><label>Conversões</label><input class="input" type="number" name="conversoes" value="${e.conversoes}"></div>
+        <div class="form-row"><label>Custo por conversão (R$)</label><input class="input" type="number" step="0.01" name="custoPorConversao" value="${e.custoPorConversao}"></div>
+      </div>
+      <div class="chart-sub">Faturamento e quantidade de vistorias por canal são calculados automaticamente a partir dos lançamentos em Vistorias quando existirem para o mês.</div>
+    </div>
+    <div class="drawer-foot"><button class="btn" data-close-drawer style="flex:1;">Cancelar</button><button class="btn btn-primary" data-save-evo style="flex:2;">Salvar</button></div>
+  `, drawer=>{
+    drawer.querySelector('[data-save-evo]').addEventListener('click', ()=>{
+      const f = drawer;
+      const mesNum = parseInt(f.querySelector('[name="mesNum"]').value);
+      const ano = parseInt(f.querySelector('[name="ano"]').value);
+      const data = {
+        ano, mesNum, mes: MESES_PT[mesNum-1],
+        investimentoGoogle: parseFloat(f.querySelector('[name="investimentoGoogle"]').value)||0,
+        visualizacoes: parseFloat(f.querySelector('[name="visualizacoes"]').value)||0,
+        cliques: parseFloat(f.querySelector('[name="cliques"]').value)||0,
+        conversoes: parseFloat(f.querySelector('[name="conversoes"]').value)||0,
+        custoPorConversao: parseFloat(f.querySelector('[name="custoPorConversao"]').value)||0,
+        faturamentoGoogle: existing?existing.faturamentoGoogle||0:0, faturamentoParticular: existing?existing.faturamentoParticular||0:0, faturamentoParceiros: existing?existing.faturamentoParceiros||0:0,
+        qtdGoogle: existing?existing.qtdGoogle||0:0, qtdParticular: existing?existing.qtdParticular||0:0, qtdParceiros: existing?existing.qtdParceiros||0:0,
+      };
+      const id = monthKey(ano,mesNum);
+      if(state.db) state.db.doc('evolucao/'+id).set(data).then(()=>toast('Mês salvo')).catch(()=>toast('Erro ao salvar','error'));
+      closeDrawer();
+    });
+  });
+}
+
+/* =========================================================================
+   CONFIRM DIALOG (lightweight, reused for destructive actions)
+   ========================================================================= */
+function confirmDialog(msg, onConfirm){
+  openDrawer(`
+    <div class="drawer-head"><h3>Confirmar ação</h3><button class="icon-btn" data-close-drawer>${icon('x')}</button></div>
+    <div class="drawer-body"><p>${escapeHtml(msg)}</p></div>
+    <div class="drawer-foot"><button class="btn" data-close-drawer style="flex:1;">Cancelar</button><button class="btn btn-accent" data-confirm-yes style="flex:1;">${icon('trash')} Excluir</button></div>
+  `, drawer=>{ drawer.querySelector('[data-confirm-yes]').addEventListener('click', ()=>{ onConfirm(); closeDrawer(); }); });
+}
+
+/* =========================================================================
+   DB WRITE HELPERS
+   ========================================================================= */
+function addDoc(collection, data){
+  if(!state.db){ toast('Sem conexão com o banco de dados','error'); return; }
+  state.db.collection(collection).add(data).catch(()=>toast('Erro ao salvar','error'));
+}
+function updateDoc(collection, id, data){
+  if(!state.db){ toast('Sem conexão com o banco de dados','error'); return; }
+  state.db.doc(collection+'/'+id).update(data).catch(()=>toast('Erro ao salvar','error'));
+}
+function deleteDoc(collection, id){
+  if(!state.db){ toast('Sem conexão com o banco de dados','error'); return; }
+  state.db.doc(collection+'/'+id).delete().then(()=>toast('Registro excluído')).catch(()=>toast('Erro ao excluir','error'));
+}
+
+/* =========================================================================
+   EXPORTS: EXCEL & PDF
+   ========================================================================= */
+async function saveFile(filename, blob){
+  try{
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    toast('Arquivo baixado');
+  }catch(e){ toast('Não foi possível gerar o arquivo','error'); }
+}
+
+const EXPORT_COLUMNS = {
+  vistorias: [['Data','data'],['Placa','placa'],['Veículo','veiculo'],['Cliente','cliente'],['Canal','canal'],['Tipo','tipo'],['Forma de pagamento','formaPagamento'],['Valor','valor'],['Nota fiscal','notaFiscal'],['Status','status']],
+  agendamentos: [['Data','data'],['Horário','horario'],['Nome','nome'],['Contato','contato'],['Veículo','veiculo'],['Placa','placa'],['Tipo','tipo'],['Valor','valor'],['Aberta no sistema','abertaNoSistema'],['Compareceu','compareceu']],
+  transferencias: [['Placa','placa'],['Veículo','veiculo'],['Despachante','despachante'],['Recebido','recebido'],['Repassado','pago']],
+  evolucao: [['Mês','mes'],['Ano','ano'],['Faturamento Google','faturamentoGoogle'],['Faturamento Particular','faturamentoParticular'],['Faturamento Parceiros','faturamentoParceiros'],['Investimento Google','investimentoGoogle'],['Visualizações','visualizacoes'],['Cliques','cliques'],['Conversões','conversoes']],
+};
+function rowsFor(tipo, periodo){
+  if(tipo==='vistorias') return state.vistorias.filter(v=>periodo==='tudo'||inRange(v.data,resolvePeriod(periodo).start,resolvePeriod(periodo).end));
+  if(tipo==='agendamentos') return state.agendamentos;
+  if(tipo==='transferencias') return state.transferencias;
+  if(tipo==='evolucao') return evoSorted().map(getEvoRow);
+  return [];
+}
+
+function exportExcel(tipo, rows){
+  const cols = EXPORT_COLUMNS[tipo];
+  const aoa = [cols.map(c=>c[0])].concat(rows.map(r=>cols.map(c=>{
+    const v = r[c[1]];
+    if(typeof v==='boolean') return v?'Sim':'Não';
+    return v==null?'':v;
+  })));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = cols.map(()=>({wch:16}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, tipo.slice(0,31));
+  const out = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  saveFile(`visao-total-${tipo}-${todayISO()}.xlsx`, new Blob([out], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+}
+function exportPDF(tipo, rows){
+  const cols = EXPORT_COLUMNS[tipo];
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape', unit:'pt'});
+  drawPdfHeader(doc, `Relatório de ${labelForTipo(tipo)}`);
+  doc.autoTable({
+    startY: 92,
+    head: [cols.map(c=>c[0])],
+    body: rows.map(r=>cols.map(c=>{ const v=r[c[1]]; if(typeof v==='boolean') return v?'Sim':'Não'; if(c[1]==='valor'||c[1]==='recebido'||c[1]==='pago') return fmtMoney(v); return v==null?'':String(v); })),
+    styles:{fontSize:8, cellPadding:5}, headStyles:{fillColor:[45,55,116], textColor:255},
+    alternateRowStyles:{fillColor:[246,246,244]},
+  });
+  doc.save && null;
+  saveFile(`visao-total-${tipo}-${todayISO()}.pdf`, doc.output('blob'));
+}
+function labelForTipo(tipo){ return {vistorias:'Vistorias', evolucao:'Evolução & Marketing', agendamentos:'Agendamentos', transferencias:'Transferências', geral:'Geral'}[tipo]||tipo; }
+
+function drawPdfHeader(doc, title){
+  doc.setFillColor(45,55,116); doc.rect(0,0,doc.internal.pageSize.getWidth(),56,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(16); doc.text('Visão Total', 40, 28);
+  doc.setFontSize(10); doc.setTextColor(220,222,240); doc.text('Sistema de gestão de vistorias', 40, 42);
+  doc.setTextColor(20,20,30); doc.setFontSize(13); doc.text(title, 40, 76);
+  doc.setFontSize(9); doc.setTextColor(120,120,130); doc.text('Gerado em '+fmtDateBR(todayISO()), doc.internal.pageSize.getWidth()-40, 76, {align:'right'});
+}
+
+function generateReportExcel(tipo, periodo){
+  const wb = XLSX.utils.book_new();
+  const tipos = tipo==='geral'? ['vistorias','evolucao','agendamentos','transferencias'] : [tipo];
+  tipos.forEach(t=>{
+    const cols = EXPORT_COLUMNS[t]; const rows = rowsFor(t, periodo);
+    const aoa = [cols.map(c=>c[0])].concat(rows.map(r=>cols.map(c=>{ const v=r[c[1]]; if(typeof v==='boolean') return v?'Sim':'Não'; return v==null?'':v; })));
+    const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=cols.map(()=>({wch:16}));
+    XLSX.utils.book_append_sheet(wb, ws, t.slice(0,31));
+  });
+  const out = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  saveFile(`visao-total-relatorio-${tipo}-${todayISO()}.xlsx`, new Blob([out], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+}
+function generateReportPDF(tipo, periodo){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'landscape', unit:'pt'});
+  const tipos = tipo==='geral'? ['vistorias','evolucao','agendamentos','transferencias'] : [tipo];
+  tipos.forEach((t,i)=>{
+    if(i>0) doc.addPage();
+    drawPdfHeader(doc, `Relatório de ${labelForTipo(t)}`);
+    const cols = EXPORT_COLUMNS[t]; const rows = rowsFor(t, periodo);
+    doc.autoTable({ startY:92, head:[cols.map(c=>c[0])], body: rows.map(r=>cols.map(c=>{ const v=r[c[1]]; if(typeof v==='boolean') return v?'Sim':'Não'; if(['valor','recebido','pago'].includes(c[1])) return fmtMoney(v); return v==null?'':String(v); })),
+      styles:{fontSize:8,cellPadding:5}, headStyles:{fillColor:[45,55,116], textColor:255}, alternateRowStyles:{fillColor:[246,246,244]} });
+  });
+  saveFile(`visao-total-relatorio-${tipo}-${todayISO()}.pdf`, doc.output('blob'));
+}
+
+/* =========================================================================
+   GLOBAL EVENTS
+   ========================================================================= */
+document.getElementById('hamburgerBtn').addEventListener('click', ()=> state.ui.sidebarOpen? closeSidebar() : openSidebar());
+document.getElementById('sbBackdrop').addEventListener('click', closeSidebar);
+document.getElementById('sbNav').addEventListener('click', e=>{ const b=e.target.closest('[data-route]'); if(b) setRoute(b.dataset.route); });
+document.addEventListener('click', e=>{ if(e.target.closest('[data-action="open-vistoria-drawer"]')) openVistoriaDrawer(null); });
+
+/* =========================================================================
+   API: fala com o backend Node deste PC via REST + Server-Sent Events, com a
+   mesma "forma" de chamada (collection/doc, onSnapshot/add/set/update/delete)
+   que o resto do app já usa — por isso o resto do código não muda.
+   ========================================================================= */
+function createApiDb(baseUrl, token, onAuthError){
+  const listeners = {}; // nome da coleção -> Set de funções de recarregar
+  function on(name, fn){ (listeners[name] = listeners[name] || new Set()).add(fn); return ()=>listeners[name].delete(fn); }
+  function notify(name){ (listeners[name] || []).forEach(fn=>fn()); }
+
+  async function req(method, path, body){
+    let res;
+    try{
+      res = await fetch(baseUrl + path, {
+        method,
+        headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { 'x-access-token': token } : {}),
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+    }catch(e){ throw { code: 'unavailable', message: 'Não foi possível falar com o servidor.' }; }
+    if(res.status === 401){ onAuthError && onAuthError(); throw { code: 'revoked', message: 'Token de acesso inválido.' }; }
+    if(res.status === 404) return null;
+    if(!res.ok) throw { code: 'unavailable', message: await res.text().catch(()=>res.statusText) };
+    if(res.status === 204) return null;
+    return res.json();
+  }
+
+  // Tempo real: qualquer escrita (deste dispositivo ou de outro) chega aqui
+  // e recarrega só a coleção afetada. Some/reconecta sozinho se cair.
+  let es;
+  function connectEvents(){
+    try{
+      es = new EventSource(baseUrl + '/api/events?token=' + encodeURIComponent(token || ''));
+      es.onmessage = (e)=>{ try{ notify(JSON.parse(e.data).collection); }catch(_){} };
+      es.onerror = ()=>{ es.close(); setTimeout(connectEvents, 4000); };
+    }catch(_){ setTimeout(connectEvents, 4000); }
+  }
+  connectEvents();
+  // Reforço: recarrega tudo periodicamente, para o caso de o navegador/rede
+  // derrubar a conexão de eventos sem avisar.
+  setInterval(()=>Object.keys(listeners).forEach(notify), 20000);
+
+  function collection(name){
+    return {
+      async add(data){ return req('POST', `/api/collections/${name}`, data); },
+      onSnapshot(next, error){
+        let cancelled = false;
+        async function load(){
+          try{
+            const docs = (await req('GET', `/api/collections/${name}`)) || [];
+            if(cancelled) return;
+            next({ docs: docs.map(d=>({ id: d.id, exists: true, data: ()=>{ const { id, ...rest } = d; return rest; } })) });
+          }catch(e){ error && error(e); }
+        }
+        load();
+        const off = on(name, load);
+        return ()=>{ cancelled = true; off(); };
+      },
+    };
+  }
+
+  function doc(path){
+    const i = path.indexOf('/');
+    const name = path.slice(0, i), id = path.slice(i + 1);
+    return {
+      async set(data){ return req('PUT', `/api/collections/${name}/${id}`, data); },
+      async update(data){ return req('PATCH', `/api/collections/${name}/${id}`, data); },
+      async delete(){ return req('DELETE', `/api/collections/${name}/${id}`); },
+      onSnapshot(next, error){
+        let cancelled = false;
+        async function load(){
+          try{
+            const d = await req('GET', `/api/collections/${name}/${id}`);
+            if(cancelled) return;
+            if(d) next({ exists: true, data: ()=>{ const { id: _id, ...rest } = d; return rest; } });
+            else next({ exists: false, data: ()=>undefined });
+          }catch(e){ error && error(e); }
+        }
+        load();
+        const off = on(name, load);
+        return ()=>{ cancelled = true; off(); };
+      },
+    };
+  }
+
+  return { collection, doc };
+}
+
+/* =========================================================================
+   PORTAL DE CONEXÃO: pede o endereço do servidor e o token de acesso na
+   primeira vez (ou quando alguém pede pra trocar), guarda no navegador.
+   ========================================================================= */
+const CONN_KEY_URL = 'vt.apiBase', CONN_KEY_TOKEN = 'vt.token';
+function getSavedConnection(){
+  try{ return { baseUrl: localStorage.getItem(CONN_KEY_URL) || '', token: localStorage.getItem(CONN_KEY_TOKEN) || '' }; }
+  catch(_){ return { baseUrl: '', token: '' }; }
+}
+function saveConnection(baseUrl, token){
+  try{ localStorage.setItem(CONN_KEY_URL, baseUrl); localStorage.setItem(CONN_KEY_TOKEN, token); }catch(_){}
+}
+function forgetConnection(){
+  try{ localStorage.removeItem(CONN_KEY_URL); localStorage.removeItem(CONN_KEY_TOKEN); }catch(_){}
+  location.reload();
+}
+async function testConnection(baseUrl, token){
+  let res;
+  try{ res = await fetch(baseUrl.replace(/\/$/, '') + '/api/collections/config/geral', { headers: token ? { 'x-access-token': token } : {} }); }
+  catch(_){ throw new Error('Não foi possível conectar a esse endereço.'); }
+  if(res.status === 401) throw new Error('Token de acesso incorreto.');
+  if(!res.ok) throw new Error('Não foi possível conectar a esse endereço.');
+}
+function showConnectGate(message){
+  const gate = document.getElementById('connectGate');
+  const saved = getSavedConnection();
+  document.getElementById('gateUrl').value = saved.baseUrl || '';
+  document.getElementById('gateToken').value = '';
+  const errEl = document.getElementById('gateError');
+  errEl.style.display = message ? 'block' : 'none';
+  errEl.textContent = message || '';
+  gate.style.display = 'flex';
+  requestAnimationFrame(()=>{ gate.style.opacity = '1'; });
+}
+function hideConnectGate(){
+  const gate = document.getElementById('connectGate');
+  gate.style.opacity = '0';
+  setTimeout(()=>{ gate.style.display = 'none'; }, 220);
+}
+document.getElementById('gateSubmit').addEventListener('click', async ()=>{
+  const btn = document.getElementById('gateSubmit');
+  const baseUrl = document.getElementById('gateUrl').value.trim().replace(/\/$/, '');
+  const token = document.getElementById('gateToken').value.trim();
+  const errEl = document.getElementById('gateError');
+  if(!baseUrl){ errEl.textContent = 'Informe o endereço do servidor.'; errEl.style.display = 'block'; return; }
+  btn.textContent = 'Conectando…'; btn.disabled = true;
+  try{
+    await testConnection(baseUrl, token);
+    saveConnection(baseUrl, token);
+    hideConnectGate();
+    startApp(baseUrl, token);
+  }catch(e){
+    errEl.textContent = e.message || 'Não foi possível conectar.';
+    errEl.style.display = 'block';
+  }finally{
+    btn.textContent = 'Conectar'; btn.disabled = false;
+  }
+});
+document.getElementById('gateToken').addEventListener('keydown', e=>{ if(e.key === 'Enter') document.getElementById('gateSubmit').click(); });
+document.getElementById('changeConnBtn').addEventListener('click', forgetConnection);
+
+/* =========================================================================
+   BOOTSTRAP
+   ========================================================================= */
+renderNav();
+renderRoute();
+
+function startApp(baseUrl, token){
+  const db = createApiDb(baseUrl, token, ()=>showConnectGate('Token de acesso inválido — conecte novamente.'));
+  state.db = db;
+  db.collection('vistorias').onSnapshot(snap=>{ state.vistorias = snap.docs.map(d=>({id:d.id, ...d.data()})); state.loaded.vistorias=true; scheduleRender(); }, ()=>{});
+  db.collection('evolucao').onSnapshot(snap=>{ state.evolucao = snap.docs.map(d=>({id:d.id, ...d.data()})); state.loaded.evolucao=true; scheduleRender(); }, ()=>{});
+  db.collection('agendamentos').onSnapshot(snap=>{ state.agendamentos = snap.docs.map(d=>({id:d.id, ...d.data()})); state.loaded.agendamentos=true; scheduleRender(); }, ()=>{});
+  db.collection('transferencias').onSnapshot(snap=>{ state.transferencias = snap.docs.map(d=>({id:d.id, ...d.data()})); state.loaded.transferencias=true; scheduleRender(); }, ()=>{});
+  db.doc('conciliacao/atual').onSnapshot(snap=>{ if(snap.exists) state.conciliacao = snap.data(); state.loaded.conciliacao=true; scheduleRender(); }, ()=>{});
+  db.doc('config/geral').onSnapshot(snap=>{ if(snap.exists) state.config = Object.assign({empresa:{nome:'Visão Total Vistorias'}}, snap.data()); state.loaded.config=true; scheduleRender(); }, ()=>{});
+}
+
+(function init(){
+  const saved = getSavedConnection();
+  if(saved.baseUrl){
+    testConnection(saved.baseUrl, saved.token)
+      .then(()=>startApp(saved.baseUrl, saved.token))
+      .catch(err=>showConnectGate(err.message));
+  } else {
+    showConnectGate();
+  }
+})();
+
+})();
+</script>
+
+</body>
+</html>
