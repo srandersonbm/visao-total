@@ -281,6 +281,31 @@ tbody tr.clickable{cursor:pointer;}
 }
 .avatar-dot{width:8px;height:8px;border-radius:50%;flex:none;}
 .mono{font-variant-numeric:tabular-nums;}
+
+/* ---------- Caixa Físico: linha do tempo e histórico expansível ---------- */
+.timeline-item{display:flex;gap:12px;}
+.timeline-dotcol{display:flex;flex-direction:column;align-items:center;width:14px;flex:none;}
+.timeline-dot{width:12px;height:12px;border-radius:50%;flex:none;margin-top:3px;border:2px solid var(--surface);box-shadow:0 0 0 1px var(--border-strong);}
+.timeline-dot.abertura,.timeline-dot.entrada{background:var(--good);}
+.timeline-dot.saida{background:var(--critical);}
+.timeline-dot.fechamento{background:var(--navy-light);}
+.timeline-line{flex:1;width:2px;background:var(--border);margin:2px 0;min-height:10px;}
+.timeline-content{flex:1;padding-bottom:16px;}
+.timeline-item:last-child .timeline-content{padding-bottom:2px;}
+.timeline-row{display:flex;justify-content:space-between;gap:10px;align-items:baseline;}
+.timeline-label{font-weight:600;font-size:13.5px;}
+.timeline-valor{font-weight:700;font-family:'Outfit';white-space:nowrap;}
+.timeline-valor.up{color:var(--good);}
+.timeline-valor.down{color:var(--critical);}
+.timeline-sub{font-size:11.5px;color:var(--muted);margin-top:1px;}
+
+.caixa-hist-row{border:1px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden;}
+.caixa-hist-head{display:flex;align-items:center;gap:14px;padding:12px 14px;cursor:pointer;flex-wrap:wrap;background:var(--surface);}
+.caixa-hist-head:hover{background:var(--surface-2);}
+.caixa-hist-head svg.chevron{transition:transform .18s;flex:none;color:var(--muted);}
+.caixa-hist-row.open .caixa-hist-head svg.chevron{transform:rotate(90deg);}
+.caixa-hist-body{max-height:0;overflow:hidden;transition:max-height .25s var(--ease);border-top:1px solid transparent;}
+.caixa-hist-row.open .caixa-hist-body{border-top-color:var(--border);}
 ::-webkit-scrollbar{width:10px;height:10px;}
 ::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:99px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -373,6 +398,12 @@ const ICONS = {
   evolucao:'<path d="M4 17l5-5 4 4 7-8"/><path d="M15 8h5v5"/>',
   agendamentos:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16"/><path d="M8 3v4M16 3v4"/>',
   transferencias:'<path d="M6 8h12l-3.5-3.5"/><path d="M18 16H6l3.5 3.5"/>',
+  caixa:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><circle cx="12" cy="13.5" r="2.3"/>',
+  arrowUpRight:'<path d="M7 17 17 7"/><path d="M9 7h8v8"/>',
+  arrowDownRight:'<path d="M7 7 17 17"/><path d="M17 9V17H9"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  chevronRight:'<path d="m9 6 6 6-6 6"/>',
   relatorios:'<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M9.5 12h5M9.5 15.5h5"/>',
   config:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2.4M12 18.6V21M4.5 7.5l2 1.4M17.5 15.1l2 1.4M3 12h2.4M18.6 12H21M4.5 16.5l2-1.4M17.5 8.9l2-1.4M7.5 4.5l1.4 2M15.1 17.5l1.4 2"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
@@ -402,6 +433,7 @@ const NAV = [
   {id:'evolucao', label:'Evolução & Marketing', icon:'evolucao'},
   {id:'agendamentos', label:'Agendamentos', icon:'agendamentos'},
   {id:'transferencias', label:'Transferências', icon:'transferencias'},
+  {id:'caixa', label:'Caixa Físico', icon:'caixa'},
   {id:'relatorios', label:'Relatórios', icon:'relatorios'},
   {id:'config', label:'Configurações', icon:'config'},
 ];
@@ -411,6 +443,7 @@ const SUBTITLES = {
   evolucao:'Faturamento por canal e resultados de mídia',
   agendamentos:'Próximas vistorias e confirmações',
   transferencias:'Transferências e remarcações via despachante',
+  caixa:'Dinheiro em caixa: abertura, vistorias em dinheiro e saídas do dia',
   relatorios:'Exporte relatórios em PDF ou Excel',
   config:'Padrões, listas e identidade da empresa',
 };
@@ -424,8 +457,8 @@ const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out'
 const state = {
   db:null, downloads:null,
   route:'home',
-  loaded:{vistorias:false, evolucao:false, agendamentos:false, transferencias:false, config:false},
-  vistorias:[], evolucao:[], agendamentos:[], transferencias:[],
+  loaded:{vistorias:false, evolucao:false, agendamentos:false, transferencias:false, caixa:false, config:false},
+  vistorias:[], evolucao:[], agendamentos:[], transferencias:[], caixa:[],
   config:{empresa:{nome:'Visão Total Vistorias'}, tiposVistoria:[], formasPagamento:[], clientes:[]},
   ui:{
     sidebarOpen:false,
@@ -433,6 +466,7 @@ const state = {
     vistoriasFilters:{periodo:'todos', customStart:'', customEnd:'', mesRef:null, anoRef:null, tipos:[], formas:[], canais:[], status:'', busca:''},
     vistoriasPage:1,
     vistoriasExportModo:'filtrado',
+    caixaExpandido:{},
     transfPage:1,
     transfFilters:{periodo:'todos', customStart:'', customEnd:'', mesRef:null, anoRef:null},
     relatorio:{tipo:'vistorias', modo:'preset', periodo:'mes-atual', customStart:'', customEnd:'', mesRef:null, anoRef:null, cliente:'', tipos:[], formas:[], canais:[]},
@@ -845,7 +879,7 @@ function renderRoute(){
   const root = document.getElementById('panelRoot');
   const fns = {
     home:renderHome, vistorias:renderVistorias, evolucao:renderEvolucao,
-    agendamentos:renderAgendamentos, transferencias:renderTransferencias,
+    agendamentos:renderAgendamentos, transferencias:renderTransferencias, caixa:renderCaixa,
     relatorios:renderRelatorios, config:renderConfig
   };
   root.innerHTML = `<div class="panel">${fns[state.route]()}</div>`;
@@ -1418,6 +1452,240 @@ afterRender.transferencias = (root)=>{
 };
 
 /* =========================================================================
+   PANEL: CAIXA FÍSICO
+   — abre com um valor em dinheiro no início do dia; cada vistoria paga em
+   dinheiro entra automaticamente como entrada; saídas são lançadas à mão,
+   por categoria; ao final do dia o caixa é fechado com o valor contado.
+   ========================================================================= */
+function caixaDocFor(dataISO){ return state.caixa.find(c=>c.id===dataISO) || null; }
+function vistoriasDinheiroDoDia(dataISO){
+  return state.vistorias.filter(v=>v.data===dataISO && v.formaPagamento==='Dinheiro' && v.status!=='pendente');
+}
+function computeCaixaResumo(dataISO){
+  const doc = caixaDocFor(dataISO);
+  const entradasVist = [...vistoriasDinheiroDoDia(dataISO)].sort((a,b)=>(a.placa||'').localeCompare(b.placa||''));
+  const totalEntradasVist = sumValor(entradasVist);
+  const abertura = doc && doc.abertura ? Number(doc.abertura.valor)||0 : 0;
+  const saidas = (doc && doc.saidas) ? [...doc.saidas].sort((a,b)=>(a.criadoEm||'').localeCompare(b.criadoEm||'')) : [];
+  const totalSaidas = saidas.reduce((s,x)=>s+(Number(x.valor)||0),0);
+  const saldoAtual = abertura + totalEntradasVist - totalSaidas;
+  const aberto = !!(doc && doc.abertura);
+  const fechado = !!(doc && doc.fechamento);
+  const fechamentoValor = fechado ? Number(doc.fechamento.valor)||0 : null;
+  const diferenca = fechado ? (fechamentoValor - saldoAtual) : null;
+  return { doc, aberto, entradasVist, totalEntradasVist, abertura, saidas, totalSaidas, saldoAtual, fechado, fechamentoValor, diferenca };
+}
+function ultimoFechamentoAnterior(antesDe){
+  const dias = state.caixa.filter(c=>c.id < antesDe && c.fechamento).sort((a,b)=>b.id.localeCompare(a.id));
+  return dias.length ? (Number(dias[0].fechamento.valor)||0) : null;
+}
+function buildCaixaTimeline(resumo){
+  const events = [];
+  if(resumo.doc && resumo.doc.abertura) events.push({tipo:'abertura', hora:resumo.doc.abertura.hora||'', label:'Abertura de caixa', valor:resumo.abertura, detalhe:`Caixa aberto com ${fmtMoney(resumo.abertura)}`});
+  resumo.entradasVist.forEach(v=>events.push({tipo:'entrada', hora:'', label:`${v.cliente||'Vistoria'} · ${v.placa||''}`, valor:Number(v.valor)||0, detalhe:`Vistoria em dinheiro — ${v.tipo||''}${v.veiculo?' — '+v.veiculo:''} — ${fmtMoney(v.valor)}`}));
+  resumo.saidas.forEach(s=>events.push({tipo:'saida', hora:s.hora||'', label:s.categoria||'Saída', valor:Number(s.valor)||0, detalhe:`${s.categoria||'Saída'}${s.descricao?' — '+s.descricao:''} — ${fmtMoney(s.valor)}`}));
+  if(resumo.fechado) events.push({tipo:'fechamento', hora:resumo.doc.fechamento.hora||'', label:'Fechamento de caixa', valor:resumo.fechamentoValor, detalhe:`Caixa fechado com ${fmtMoney(resumo.fechamentoValor)} contados`});
+  return events;
+}
+function renderCaixaTimeline(resumo){
+  const events = buildCaixaTimeline(resumo);
+  if(!events.length) return emptyState('Nenhuma movimentação registrada');
+  return `<div>${events.map((e,i)=>`
+    <div class="timeline-item">
+      <div class="timeline-dotcol">
+        <span class="timeline-dot ${e.tipo} chart-mark" data-tip="${escapeHtml(e.detalhe)}"></span>
+        ${i<events.length-1?'<span class="timeline-line"></span>':''}
+      </div>
+      <div class="timeline-content">
+        <div class="timeline-row">
+          <span class="timeline-label">${escapeHtml(e.label)}</span>
+          <span class="timeline-valor ${e.tipo==='saida'?'down':'up'}">${e.tipo==='saida'?'-':'+'}${fmtMoney(e.valor)}</span>
+        </div>
+        <div class="timeline-sub">${e.hora?escapeHtml(e.hora)+' · ':''}${escapeHtml(e.detalhe)}</div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+function renderCaixaSaidasList(resumo, editable){
+  if(!resumo.saidas.length) return emptyState('Nenhuma saída registrada');
+  return `<div class="mini-list">${resumo.saidas.map(s=>`
+    <div class="mini-row">
+      <span class="pill pill-critical" style="flex:none;">${escapeHtml(s.categoria||'Saída')}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;">${escapeHtml(s.descricao||'—')}</div>
+        <div style="font-size:11px;color:var(--muted);">${s.hora?escapeHtml(s.hora):''}</div>
+      </div>
+      <span class="td-strong">${fmtMoney(s.valor)}</span>
+      ${editable?`<button class="icon-btn" data-del-saida="${s.id}">${icon('trash')}</button>`:'<span style="width:27px;"></span>'}
+    </div>`).join('')}</div>`;
+}
+function renderCaixaResumoKpis(resumo){
+  return `
+  <div class="kpi-row">
+    <div class="card stat"><div class="stat-label">Saldo em caixa</div><div class="stat-value" data-count="${resumo.fechado?resumo.fechamentoValor:resumo.saldoAtual}" data-fmt="money">R$0</div></div>
+    <div class="card stat"><div class="stat-label">Entradas</div><div class="stat-value" data-count="${resumo.abertura+resumo.totalEntradasVist}" data-fmt="money">R$0</div><div class="chart-sub">Abertura ${fmtMoney(resumo.abertura)} + ${resumo.entradasVist.length} vistoria(s) em dinheiro</div></div>
+    <div class="card stat"><div class="stat-label">Saídas</div><div class="stat-value" data-count="${resumo.totalSaidas}" data-fmt="money">R$0</div><div class="chart-sub">${resumo.saidas.length} lançamento(s)</div></div>
+    ${resumo.fechado?`<div class="card stat"><div class="stat-label">Diferença no fechamento</div><div class="stat-value" data-count="${resumo.diferenca}" data-fmt="money"></div><div class="chart-sub" style="color:${Math.abs(resumo.diferenca)<0.01?'var(--good)':'var(--critical)'};font-weight:600;">${Math.abs(resumo.diferenca)<0.01?'Caixa bateu certinho':(resumo.diferenca<0?'Faltou dinheiro no caixa':'Sobrou dinheiro no caixa')}</div></div>`:''}
+  </div>`;
+}
+function renderCaixa(){
+  const hoje = todayISO();
+  const resumo = computeCaixaResumo(hoje);
+  return `
+  <div class="panel-header">
+    <div><h2>Caixa Físico</h2><p>${!resumo.aberto?'Caixa de hoje ainda não foi aberto':(resumo.fechado?'Caixa de hoje já foi fechado':'Caixa de hoje está aberto')}</p></div>
+    <div class="panel-actions">
+      ${resumo.aberto && !resumo.fechado?`<button class="btn" data-action="nova-saida">${icon('arrowDownRight')} Registrar saída</button><button class="btn btn-accent" data-action="fechar-caixa">${icon('lock')} Fechar caixa</button>`:''}
+      ${!resumo.aberto?`<button class="btn btn-primary" data-action="abrir-caixa">${icon('plus')} Abrir caixa</button>`:''}
+    </div>
+  </div>
+
+  ${!resumo.aberto?`
+  <div class="card" style="padding:34px 20px;text-align:center;">
+    ${icon('caixa','',34)}
+    <h3 style="margin:14px 0 4px;">O caixa de hoje ainda não foi aberto</h3>
+    <p class="chart-sub" style="margin-bottom:16px;">Informe o valor em dinheiro com que o caixa começa o dia.</p>
+    <button class="btn btn-primary" data-action="abrir-caixa" style="margin:0 auto;">${icon('plus')} Abrir caixa de hoje</button>
+  </div>
+  `:`
+  ${renderCaixaResumoKpis(resumo)}
+  ${resumo.fechado?`<div class="pill pill-muted" style="margin-bottom:14px;">${icon('lock','',13)} Fechado às ${escapeHtml(resumo.doc.fechamento.hora||'')} — para lançar mais saídas, reabra pelo suporte</div>`:''}
+  <div class="grid-2" style="margin-bottom:14px;">
+    <div class="card chart-card">
+      <h3>Saídas de hoje</h3><div class="chart-sub">Lançamentos por categoria</div>
+      ${renderCaixaSaidasList(resumo, !resumo.fechado)}
+    </div>
+    <div class="card chart-card">
+      <h3>Linha do tempo</h3><div class="chart-sub">Passe o mouse sobre os pontos para ver os detalhes</div>
+      ${renderCaixaTimeline(resumo)}
+    </div>
+  </div>
+  `}
+
+  <div class="card" style="padding:18px 20px;margin-top:4px;">
+    <h3 style="margin:0 0 12px;">Histórico de caixa</h3>
+    <div id="caixaHistorico">${renderCaixaHistorico()}</div>
+  </div>
+  `;
+}
+function renderCaixaHistorico(){
+  const dias = state.caixa.filter(c=>c.id!==todayISO()).map(c=>c.id).sort((a,b)=>b.localeCompare(a));
+  if(!dias.length) return emptyState('Nenhum dia anterior registrado ainda');
+  return dias.map(id=>{
+    const resumo = computeCaixaResumo(id);
+    const open = !!state.ui.caixaExpandido[id];
+    return `
+    <div class="caixa-hist-row ${open?'open':''}" data-caixa-hist="${id}">
+      <div class="caixa-hist-head" data-caixa-toggle="${id}">
+        ${icon('chevronRight','chevron',16)}
+        <div style="min-width:100px;"><b>${fmtDateBR(id)}</b></div>
+        <div class="chart-sub" style="flex:1;min-width:160px;">Abertura ${fmtMoney(resumo.abertura)}${resumo.fechado?` · Fechamento ${fmtMoney(resumo.fechamentoValor)}`:' · Não fechado'}</div>
+        <span class="pill ${resumo.fechado?(Math.abs(resumo.diferenca)<0.01?'pill-good':'pill-warn'):'pill-muted'}">${resumo.fechado?(Math.abs(resumo.diferenca)<0.01?'Bateu certinho':(resumo.diferenca<0?'Faltou '+fmtMoney(Math.abs(resumo.diferenca)):'Sobrou '+fmtMoney(resumo.diferenca))):'Em aberto'}</span>
+        <b class="mono">${fmtMoney(resumo.fechado?resumo.fechamentoValor:resumo.saldoAtual)}</b>
+      </div>
+      <div class="caixa-hist-body">
+        <div style="padding:4px 14px 16px;">
+          ${renderCaixaResumoKpis(resumo)}
+          <div class="grid-2">
+            <div><h3 style="font-size:13.5px;">Saídas do dia</h3>${renderCaixaSaidasList(resumo, false)}</div>
+            <div><h3 style="font-size:13.5px;">Linha do tempo</h3>${renderCaixaTimeline(resumo)}</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function openAbrirCaixaDrawer(){
+  const hoje = todayISO();
+  const sugestao = ultimoFechamentoAnterior(hoje);
+  openDrawer(`
+    <div class="drawer-head"><h3>Abrir caixa de hoje</h3><button class="icon-btn" data-close-drawer>${icon('x')}</button></div>
+    <div class="drawer-body">
+      <div class="form-row"><label>Valor de abertura (R$)</label><input class="input" type="number" step="0.01" name="valor" value="${sugestao!=null?sugestao:''}"></div>
+      ${sugestao!=null?`<div class="chart-sub">Sugerido a partir do fechamento do último dia (${fmtMoney(sugestao)}) — ajuste se for diferente.</div>`:''}
+      <div class="form-row"><label>Horário</label><input class="input" type="time" name="hora" value="${new Date().toTimeString().slice(0,5)}"></div>
+    </div>
+    <div class="drawer-foot"><button class="btn" data-close-drawer style="flex:1;">Cancelar</button><button class="btn btn-primary" data-save-abrir style="flex:2;">${icon('plus')} Abrir caixa</button></div>
+  `, drawer=>{
+    drawer.querySelector('[data-save-abrir]').addEventListener('click', ()=>{
+      const valor = parseFloat(drawer.querySelector('[name="valor"]').value);
+      if(isNaN(valor) || valor<0){ toast('Informe o valor de abertura','error'); return; }
+      const hora = drawer.querySelector('[name="hora"]').value || new Date().toTimeString().slice(0,5);
+      if(state.db) state.db.doc('caixa/'+hoje).set({ data:hoje, abertura:{valor,hora}, saidas:[] }).then(()=>toast('Caixa aberto')).catch(()=>toast('Erro ao abrir caixa','error'));
+      closeDrawer();
+    });
+  });
+}
+function openFecharCaixaDrawer(){
+  const hoje = todayISO();
+  const resumo = computeCaixaResumo(hoje);
+  openDrawer(`
+    <div class="drawer-head"><h3>Fechar caixa de hoje</h3><button class="icon-btn" data-close-drawer>${icon('x')}</button></div>
+    <div class="drawer-body">
+      <div class="chart-sub">Saldo esperado pelo sistema: <b>${fmtMoney(resumo.saldoAtual)}</b> (abertura + vistorias em dinheiro − saídas).</div>
+      <div class="form-row"><label>Valor contado no caixa (R$)</label><input class="input" type="number" step="0.01" name="valor" value="${resumo.saldoAtual.toFixed(2)}"></div>
+      <div class="form-row"><label>Horário</label><input class="input" type="time" name="hora" value="${new Date().toTimeString().slice(0,5)}"></div>
+    </div>
+    <div class="drawer-foot"><button class="btn" data-close-drawer style="flex:1;">Cancelar</button><button class="btn btn-accent" data-save-fechar style="flex:2;">${icon('lock')} Fechar caixa</button></div>
+  `, drawer=>{
+    drawer.querySelector('[data-save-fechar]').addEventListener('click', ()=>{
+      const valor = parseFloat(drawer.querySelector('[name="valor"]').value);
+      if(isNaN(valor) || valor<0){ toast('Informe o valor contado','error'); return; }
+      const hora = drawer.querySelector('[name="hora"]').value || new Date().toTimeString().slice(0,5);
+      updateDoc('caixa', hoje, { fechamento:{valor,hora} });
+      closeDrawer(); toast('Caixa fechado');
+    });
+  });
+}
+function openNovaSaidaDrawer(){
+  const hoje = todayISO();
+  const categorias = (state.config.categoriasSaida && state.config.categoriasSaida.length) ? state.config.categoriasSaida : ['Diversos'];
+  openDrawer(`
+    <div class="drawer-head"><h3>Registrar saída</h3><button class="icon-btn" data-close-drawer>${icon('x')}</button></div>
+    <div class="drawer-body">
+      <div class="form-row"><label>Categoria</label><select class="input" name="categoria">${categorias.map(c=>`<option>${escapeHtml(c)}</option>`).join('')}</select></div>
+      <div class="form-row"><label>Valor (R$)</label><input class="input" type="number" step="0.01" name="valor"></div>
+      <div class="form-row"><label>Descrição <span class="hint">(opcional)</span></label><input class="input" name="descricao" placeholder="Ex.: almoço da equipe"></div>
+    </div>
+    <div class="drawer-foot"><button class="btn" data-close-drawer style="flex:1;">Cancelar</button><button class="btn btn-primary" data-save-saida style="flex:2;">${icon('plus')} Registrar</button></div>
+  `, drawer=>{
+    drawer.querySelector('[data-save-saida]').addEventListener('click', ()=>{
+      const valor = parseFloat(drawer.querySelector('[name="valor"]').value);
+      if(!valor || valor<=0){ toast('Informe o valor da saída','error'); return; }
+      const now = new Date();
+      const nova = { id:crypto.randomUUID(), categoria:drawer.querySelector('[name="categoria"]').value, valor, descricao:drawer.querySelector('[name="descricao"]').value.trim(), hora:now.toTimeString().slice(0,5), criadoEm:now.toISOString() };
+      const doc = caixaDocFor(hoje);
+      const saidas = [...(doc && doc.saidas ? doc.saidas : []), nova];
+      updateDoc('caixa', hoje, { saidas });
+      closeDrawer(); toast('Saída registrada');
+    });
+  });
+}
+afterRender.caixa = (root)=>{
+  root.querySelectorAll('[data-action="abrir-caixa"]').forEach(b=>b.addEventListener('click', openAbrirCaixaDrawer));
+  root.querySelectorAll('[data-action="fechar-caixa"]').forEach(b=>b.addEventListener('click', openFecharCaixaDrawer));
+  root.querySelectorAll('[data-action="nova-saida"]').forEach(b=>b.addEventListener('click', openNovaSaidaDrawer));
+  root.querySelectorAll('[data-del-saida]').forEach(btn=>btn.addEventListener('click', ()=>{
+    const hoje = todayISO();
+    const doc = caixaDocFor(hoje);
+    if(!doc) return;
+    confirmDialog('Excluir esta saída?', ()=>{
+      const saidas = (doc.saidas||[]).filter(s=>s.id!==btn.dataset.delSaida);
+      updateDoc('caixa', hoje, { saidas });
+    });
+  }));
+  root.querySelectorAll('[data-caixa-toggle]').forEach(head=>head.addEventListener('click', ()=>{
+    const id = head.dataset.caixaToggle;
+    const row = root.querySelector(`[data-caixa-hist="${id}"]`);
+    const body = row.querySelector('.caixa-hist-body');
+    const willOpen = !row.classList.contains('open');
+    state.ui.caixaExpandido[id] = willOpen;
+    row.classList.toggle('open', willOpen);
+    body.style.maxHeight = willOpen ? body.scrollHeight+'px' : '';
+  }));
+  root.querySelectorAll('.caixa-hist-row.open .caixa-hist-body').forEach(body=>{ body.style.maxHeight = body.scrollHeight+'px'; });
+};
+
+/* =========================================================================
    PANEL: RELATÓRIOS
    ========================================================================= */
 function getEffectivePeriodFilter(r){
@@ -1588,6 +1856,7 @@ function renderConfig(){
     ${tagBlock('Tipos de vistoria','tiposVistoria','Lista usada no formulário de vistorias')}
     ${tagBlock('Formas de pagamento','formasPagamento','Lista usada no formulário de vistorias')}
     ${tagBlock('Clientes frequentes','clientes','Sugestões de autocompletar no cadastro')}
+    ${tagBlock('Categorias de saída do caixa','categoriasSaida','Lista usada ao registrar uma saída no Caixa Físico')}
   </div>
   `;
 }
@@ -2184,6 +2453,7 @@ function startApp(baseUrl, token){
   db.collection('evolucao').onSnapshot(snap=>{ state.evolucao = snap.docs.map(d=>({id:d.id, ...d.data()})); state.loaded.evolucao=true; scheduleRender(); }, ()=>{});
   db.collection('agendamentos').onSnapshot(snap=>{ state.agendamentos = snap.docs.map(d=>({id:d.id, ...d.data()})); state.loaded.agendamentos=true; scheduleRender(); }, ()=>{});
   db.collection('transferencias').onSnapshot(snap=>{ state.transferencias = snap.docs.map(d=>({id:d.id, ...d.data()})); state.loaded.transferencias=true; scheduleRender(); }, ()=>{});
+  db.collection('caixa').onSnapshot(snap=>{ state.caixa = snap.docs.map(d=>({id:d.id, ...d.data()})); state.loaded.caixa=true; scheduleRender(); }, ()=>{});
   db.doc('config/geral').onSnapshot(snap=>{ if(snap.exists) state.config = Object.assign({empresa:{nome:'Visão Total Vistorias'}}, snap.data()); state.loaded.config=true; scheduleRender(); }, ()=>{});
 }
 

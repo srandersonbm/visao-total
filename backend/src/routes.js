@@ -2,14 +2,14 @@ const express = require('express');
 const crypto = require('crypto');
 const { db } = require('./db');
 
-// Toda a área operacional do app vive nestas 6 "coleções" — o front-end usa
+// Toda a área operacional do app vive nestas "coleções" — o front-end usa
 // exatamente esses nomes.
 const ALLOWED_COLLECTIONS = new Set([
   'vistorias',
   'evolucao',
   'agendamentos',
   'transferencias',
-  'conciliacao',
+  'caixa',
   'config',
 ]);
 
