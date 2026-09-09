@@ -434,10 +434,10 @@ const state = {
   ui:{
     sidebarOpen:false,
     homePeriod:'mes-atual',
-    vistoriasFilters:{periodo:'todos', customStart:'', customEnd:'', tipos:[], formas:[], canais:[], status:'', busca:''},
+    vistoriasFilters:{periodo:'todos', customStart:'', customEnd:'', mesRef:null, anoRef:null, tipos:[], formas:[], canais:[], status:'', busca:''},
     vistoriasPage:1,
     transfPage:1,
-    transfFilters:{periodo:'todos', customStart:'', customEnd:''},
+    transfFilters:{periodo:'todos', customStart:'', customEnd:'', mesRef:null, anoRef:null},
     relatorio:{tipo:'vistorias', modo:'preset', periodo:'mes-atual', customStart:'', customEnd:'', mesRef:null, anoRef:null, cliente:'', tipos:[], formas:[], canais:[]},
     drawer:null,
   }
@@ -501,15 +501,32 @@ function resolvePeriodAny(filter){
     const spanMs = Math.max(1, end - start);
     return { start, end, prevStart: new Date(start.getTime() - spanMs), prevEnd: start };
   }
+  if(filter && filter.periodo === 'mes'){
+    const mesNum = filter.mesRef || (TODAY.getMonth()+1), ano = filter.anoRef || TODAY.getFullYear();
+    const start = new Date(ano, mesNum-1, 1), end = new Date(ano, mesNum, 1);
+    return { start, end, prevStart: new Date(ano, mesNum-2, 1), prevEnd: start };
+  }
   return resolvePeriod(filter ? filter.periodo : 'todos');
 }
-const PERIODO_OPCOES = [['todos','Todos'],['mes-atual','Mês atual'],['30d','Últimos 30 dias'],['90d','Últimos 90 dias'],['ano','Este ano'],['custom','Personalizado…']];
+const PERIODO_OPCOES = [['todos','Todos'],['mes-atual','Mês atual'],['30d','Últimos 30 dias'],['90d','Últimos 90 dias'],['ano','Este ano'],['mes','Mês específico…'],['custom','Personalizado…']];
+function periodoLabel(filter){
+  if(filter.periodo==='mes') return `${MESES_PT[(filter.mesRef||TODAY.getMonth()+1)-1]}/${filter.anoRef||TODAY.getFullYear()}`;
+  if(filter.periodo==='custom') return `${fmtDateBR(filter.customStart)||'…'} a ${fmtDateBR(filter.customEnd)||'…'}`;
+  const p = PERIODO_OPCOES.find(([v])=>v===filter.periodo);
+  return p ? p[1] : 'Todos';
+}
 function renderPeriodField(prefix, filter, includeTodos=true){
   const opts = includeTodos ? PERIODO_OPCOES : PERIODO_OPCOES.filter(([v])=>v!=='todos');
+  const anoAtual = TODAY.getFullYear();
+  const anos = []; for(let a=anoAtual+1; a>=anoAtual-4; a--) anos.push(a);
   return `
   <div class="field"><label>Período</label>
     <select data-period="${prefix}">${opts.map(([v,l])=>`<option value="${v}" ${filter.periodo===v?'selected':''}>${l}</option>`).join('')}</select>
   </div>
+  ${filter.periodo==='mes'?`
+  <div class="field"><label>Mês</label><select data-period-mes="${prefix}">${MESES_PT.map((m,i)=>`<option value="${i+1}" ${(filter.mesRef||TODAY.getMonth()+1)===i+1?'selected':''}>${m}</option>`).join('')}</select></div>
+  <div class="field"><label>Ano</label><select data-period-ano="${prefix}">${anos.map(a=>`<option value="${a}" ${(filter.anoRef||anoAtual)===a?'selected':''}>${a}</option>`).join('')}</select></div>
+  `:''}
   ${filter.periodo==='custom'?`
   <div class="field"><label>De</label><input class="input" type="date" data-period-start="${prefix}" value="${escapeHtml(filter.customStart||'')}"></div>
   <div class="field"><label>Até</label><input class="input" type="date" data-period-end="${prefix}" value="${escapeHtml(filter.customEnd||'')}"></div>
@@ -522,6 +539,10 @@ function bindPeriodField(root, prefix, filter, onChange){
   if(s) s.addEventListener('change', e=>{ filter.customStart = e.target.value; onChange(); });
   const en = root.querySelector(`[data-period-end="${prefix}"]`);
   if(en) en.addEventListener('change', e=>{ filter.customEnd = e.target.value; onChange(); });
+  const ms = root.querySelector(`[data-period-mes="${prefix}"]`);
+  if(ms) ms.addEventListener('change', e=>{ filter.mesRef = parseInt(e.target.value); onChange(); });
+  const asel = root.querySelector(`[data-period-ano="${prefix}"]`);
+  if(asel) asel.addEventListener('change', e=>{ filter.anoRef = parseInt(e.target.value); onChange(); });
 }
 
 /* opções de canal: Google Ads / Particular / cada cliente-parceiro cadastrado
@@ -991,22 +1012,27 @@ afterRender.home = (root)=>{
 /* =========================================================================
    PANEL: VISTORIAS
    ========================================================================= */
-function filteredVistorias(){
-  const f = state.ui.vistoriasFilters;
-  let list = [...state.vistorias];
-  if(f.periodo!=='todos'){ const {start,end}=resolvePeriodAny(f); list = list.filter(v=>inRange(v.data,start,end)); }
+// aplica todos os filtros de Vistorias EXCETO o de período (usado tanto para
+// o período atual quanto, com outra janela de datas, para a comparação)
+function applyNonPeriodFilters(list, f){
   if(f.tipos && f.tipos.length) list = list.filter(v=>f.tipos.includes(v.tipo));
   if(f.formas && f.formas.length) list = list.filter(v=>f.formas.includes(v.formaPagamento));
   if(f.canais && f.canais.length) list = list.filter(v=>vistoriaMatchesCanal(v, f.canais));
   if(f.status) list = list.filter(v=>(v.status||'concluida')===f.status);
   if(f.busca){ const q=f.busca.toLowerCase(); list = list.filter(v=> (v.placa||'').toLowerCase().includes(q) || (v.cliente||'').toLowerCase().includes(q) || (v.veiculo||'').toLowerCase().includes(q)); }
+  return list;
+}
+function filteredVistorias(){
+  const f = state.ui.vistoriasFilters;
+  let list = [...state.vistorias];
+  if(f.periodo!=='todos'){ const {start,end}=resolvePeriodAny(f); list = list.filter(v=>inRange(v.data,start,end)); }
+  list = applyNonPeriodFilters(list, f);
   return list.sort((a,b)=> (b.data||'').localeCompare(a.data||''));
 }
 function vistoriasFilterSummary(){
   const f = state.ui.vistoriasFilters;
   const parts = [];
-  const p = PERIODO_OPCOES.find(([v])=>v===f.periodo);
-  parts.push('Período: '+(f.periodo==='custom' ? `${fmtDateBR(f.customStart)||'…'} a ${fmtDateBR(f.customEnd)||'…'}` : (p?p[1]:'Todos')));
+  parts.push('Período: '+periodoLabel(f));
   if(f.tipos && f.tipos.length) parts.push('Tipo: '+f.tipos.join(', '));
   if(f.formas && f.formas.length) parts.push('Pagamento: '+f.formas.join(', '));
   if(f.canais && f.canais.length) parts.push('Canal: '+getCanalOptions().filter(o=>f.canais.includes(o.value)).map(o=>o.label).join(', '));
@@ -1050,6 +1076,7 @@ function vistoriasSkeleton(){
   <div class="card" style="padding:30px;"><div class="skeleton" style="height:220px;"></div></div>`;
 }
 function computeVistoriasBodyHtml(){
+  const f = state.ui.vistoriasFilters;
   const list = filteredVistorias();
   const total = sumValor(list), qtd = list.length, ticket = qtd?total/qtd:0;
   const pageSize=25, pages=Math.max(1,Math.ceil(list.length/pageSize));
@@ -1060,10 +1087,27 @@ function computeVistoriasBodyHtml(){
   const formaColors=['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)','var(--c7)','var(--c8)'];
   const formaData = Object.entries(byForma).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>({label:k,value:v,color:formaColors[i%formaColors.length]}));
 
+  // comparação com o período anterior equivalente (mesmo intervalo de dias,
+  // logo antes do período escolhido) — só faz sentido quando um período foi escolhido
+  let deltaFat = null, deltaQtd = null, prevLabel = '';
+  if(f.periodo !== 'todos'){
+    const { prevStart, prevEnd } = resolvePeriodAny(f);
+    const prevList = applyNonPeriodFilters(state.vistorias.filter(v=>inRange(v.data, prevStart, prevEnd)), f);
+    const prevTotal = sumValor(prevList), prevQtd = prevList.length;
+    deltaFat = prevTotal ? (total/prevTotal - 1) * 100 : (total ? null : 0);
+    deltaQtd = prevQtd ? (qtd/prevQtd - 1) * 100 : (qtd ? null : 0);
+    prevLabel = `${fmtDateBR(toISO(prevStart))} a ${fmtDateBR(toISO(addDays(prevEnd,-1)))}`;
+  }
+  function deltaHtml(v){
+    if(v===null) return `<div class="stat-delta flat">sem período anterior para comparar</div>`;
+    const cls = v>=0?'up':'down';
+    return `<div class="stat-delta ${cls}" title="Comparado a ${escapeHtml(prevLabel)}">${arrowFor(cls)} ${v>=0?'+':''}${v.toFixed(1)}% vs. período anterior</div>`;
+  }
+
   return { list, total, qtd, ticket, pages, pageItems, html: `
   <div class="kpi-row">
-    <div class="card stat"><div class="stat-label">Faturamento filtrado</div><div class="stat-value" data-count="${total}" data-fmt="money">R$0</div></div>
-    <div class="card stat"><div class="stat-label">Vistorias</div><div class="stat-value" data-count="${qtd}" data-fmt="int">0</div></div>
+    <div class="card stat"><div class="stat-label">Faturamento filtrado</div><div class="stat-value" data-count="${total}" data-fmt="money">R$0</div>${f.periodo!=='todos'?deltaHtml(deltaFat):''}</div>
+    <div class="card stat"><div class="stat-label">Vistorias</div><div class="stat-value" data-count="${qtd}" data-fmt="int">0</div>${f.periodo!=='todos'?deltaHtml(deltaQtd):''}</div>
     <div class="card stat"><div class="stat-label">Ticket médio</div><div class="stat-value" data-count="${ticket}" data-fmt="money">R$0</div></div>
   </div>
 
@@ -1430,6 +1474,7 @@ function relatorioPreviewData(r){
   const pf = getEffectivePeriodFilter(r), extra = getRelatorioExtra(r);
   const out = {};
   if(r.tipo==='vistorias' || r.tipo==='geral'){ const l = rowsFor('vistorias', pf, extra); out.vistorias = {count:l.length, total:sumValor(l)}; }
+  if(r.tipo==='vistoriasPorCliente'){ const l = rowsFor('vistoriasPorCliente', pf, extra); out.porCliente = {clientes:l.length, total:l.reduce((s,x)=>s+x.total,0), top:l.slice(0,5)}; }
   if(r.tipo==='agendamentos' || r.tipo==='geral'){ const l = rowsFor('agendamentos', pf, {}); out.agendamentos = {count:l.length, total:sumValor(l)}; }
   if(r.tipo==='transferencias' || r.tipo==='geral'){ const l = rowsFor('transferencias', pf, {}); out.transferencias = {count:l.length, recebido:l.reduce((s,t)=>s+(Number(t.recebido)||0),0), pago:l.reduce((s,t)=>s+(Number(t.pago)||0),0)}; }
   if(r.tipo==='evolucao' || r.tipo==='geral'){ const l = rowsFor('evolucao', pf, {}); out.evolucao = {count:l.length}; }
@@ -1438,7 +1483,8 @@ function relatorioPreviewData(r){
 
 function renderRelatorios(){
   const r = state.ui.relatorio;
-  const mostraFiltrosVistoria = r.tipo==='vistorias' || r.tipo==='geral';
+  const mostraFiltrosVistoria = r.tipo==='vistorias' || r.tipo==='geral' || r.tipo==='vistoriasPorCliente';
+  const ehPorCliente = r.tipo==='vistoriasPorCliente';
   const anoAtual = TODAY.getFullYear();
   const anos = []; for(let a=anoAtual+1; a>=anoAtual-4; a--) anos.push(a);
 
@@ -1449,6 +1495,7 @@ function renderRelatorios(){
       <div class="form-row"><label>Tipo de relatório</label>
         <select data-rel="tipo" class="input">
           <option value="vistorias" ${r.tipo==='vistorias'?'selected':''}>Vistorias</option>
+          <option value="vistoriasPorCliente" ${r.tipo==='vistoriasPorCliente'?'selected':''}>Vistorias por cliente</option>
           <option value="evolucao" ${r.tipo==='evolucao'?'selected':''}>Evolução & Marketing</option>
           <option value="agendamentos" ${r.tipo==='agendamentos'?'selected':''}>Agendamentos</option>
           <option value="transferencias" ${r.tipo==='transferencias'?'selected':''}>Transferências</option>
@@ -1485,9 +1532,9 @@ function renderRelatorios(){
 
       ${mostraFiltrosVistoria?`
       <div class="divider"></div>
-      <div class="chart-sub" style="margin-bottom:8px;">Filtros específicos de vistorias (aplicados ao relatório de vistorias, e à parte de vistorias do relatório geral)</div>
+      <div class="chart-sub" style="margin-bottom:8px;">${ehPorCliente?'Filtros de vistorias (o agrupamento por cliente considera todos os clientes)':'Filtros específicos de vistorias (aplicados ao relatório de vistorias, e à parte de vistorias do relatório geral)'}</div>
       <div class="filters" id="relFiltros">
-        <div class="field"><label>Cliente</label><select data-rel="cliente" class="input"><option value="">Todos</option>${state.config.clientes.map(c=>`<option ${r.cliente===c?'selected':''}>${escapeHtml(c)}</option>`).join('')}</select></div>
+        ${ehPorCliente?'':`<div class="field"><label>Cliente</label><select data-rel="cliente" class="input"><option value="">Todos</option>${state.config.clientes.map(c=>`<option ${r.cliente===c?'selected':''}>${escapeHtml(c)}</option>`).join('')}</select></div>`}
         ${renderMultiSelect('relTipos','Tipo', state.config.tiposVistoria.map(t=>({value:t,label:t})), r.tipos)}
         ${renderMultiSelect('relFormas','Pagamento', state.config.formasPagamento.map(t=>({value:t,label:t})), r.formas)}
         ${renderMultiSelect('relCanais','Canal', getCanalOptions(), r.canais)}
@@ -1511,6 +1558,10 @@ function renderRelatorioPreview(){
   const data = relatorioPreviewData(r);
   const rows = [];
   if(data.vistorias) rows.push(['Vistorias no período', data.vistorias.count], ['Faturamento de vistorias', fmtMoney(data.vistorias.total)]);
+  if(data.porCliente){
+    rows.push(['Clientes no período', data.porCliente.clientes], ['Faturamento total', fmtMoney(data.porCliente.total)]);
+    data.porCliente.top.forEach((c,i)=>rows.push([`${i+1}º — ${c.cliente}`, `${fmtMoney(c.total)} (${c.qtd})`]));
+  }
   if(data.agendamentos) rows.push(['Agendamentos no período', data.agendamentos.count]);
   if(data.transferencias) rows.push(['Transferências no período', data.transferencias.count], ['Total recebido', fmtMoney(data.transferencias.recebido)], ['Total repassado', fmtMoney(data.transferencias.pago)]);
   if(data.evolucao) rows.push(['Meses de evolução incluídos', data.evolucao.count]);
@@ -1842,11 +1893,13 @@ async function saveFile(filename, blob){
   }catch(e){ toast('Não foi possível gerar o arquivo','error'); }
 }
 
+const MONEY_COLS = ['valor','recebido','pago','total','ticket'];
 const EXPORT_COLUMNS = {
   vistorias: [['Data','data'],['Placa','placa'],['Veículo','veiculo'],['Cliente','cliente'],['Canal','canal'],['Tipo','tipo'],['Forma de pagamento','formaPagamento'],['Valor','valor'],['Nota fiscal','notaFiscal'],['Status','status']],
   agendamentos: [['Data','data'],['Horário','horario'],['Nome','nome'],['Contato','contato'],['Veículo','veiculo'],['Placa','placa'],['Tipo','tipo'],['Valor','valor'],['Aberta no sistema','abertaNoSistema'],['Compareceu','compareceu']],
   transferencias: [['Data','data'],['Placa','placa'],['Veículo','veiculo'],['Despachante','despachante'],['Recebido','recebido'],['Repassado','pago']],
   evolucao: [['Mês','mes'],['Ano','ano'],['Faturamento Google','faturamentoGoogle'],['Faturamento Particular','faturamentoParticular'],['Faturamento Parceiros','faturamentoParceiros'],['Investimento Google','investimentoGoogle'],['Visualizações','visualizacoes'],['Cliques','cliques'],['Conversões','conversoes']],
+  vistoriasPorCliente: [['Cliente','cliente'],['Qtd. vistorias','qtd'],['Valor total','total'],['Ticket médio','ticket']],
 };
 // periodFilter: {periodo, customStart, customEnd}. extra (só afeta 'vistorias'):
 // {tipos:[], formas:[], canais:[], cliente:''}
@@ -1860,6 +1913,19 @@ function rowsFor(tipo, periodFilter, extra){
     if(extra.canais && extra.canais.length) list = list.filter(v=>vistoriaMatchesCanal(v, extra.canais));
     if(extra.cliente) list = list.filter(v=>(v.cliente||'')===extra.cliente);
     return list.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  }
+  if(tipo==='vistoriasPorCliente'){
+    // agrupa por cliente — ignora o filtro de cliente único, já que o objetivo
+    // aqui é comparar todos os clientes lado a lado
+    const list = rowsFor('vistorias', periodFilter, Object.assign({}, extra, {cliente:''}));
+    const byCliente = {};
+    list.forEach(v=>{
+      const c = v.cliente || '—';
+      byCliente[c] = byCliente[c] || {cliente:c, qtd:0, total:0};
+      byCliente[c].qtd++;
+      byCliente[c].total += Number(v.valor)||0;
+    });
+    return Object.values(byCliente).map(r=>({...r, ticket: r.qtd ? r.total/r.qtd : 0})).sort((a,b)=>b.total-a.total);
   }
   if(tipo==='agendamentos') return state.agendamentos.filter(a=>inRange(a.data,start,end));
   if(tipo==='transferencias') return state.transferencias.filter(t=>!t.data || inRange(t.data,start,end));
@@ -1880,6 +1946,16 @@ function totalsRowFor(tipo, cols, rows){
       if(c[1]==='recebido') return fmtMoney(sum('recebido'));
       if(c[1]==='pago') return fmtMoney(sum('pago'));
       if(c[1]===firstCol) return `Total (${rows.length})`;
+      return '';
+    });
+  }
+  if(tipo==='vistoriasPorCliente'){
+    const qtd = sum('qtd'), total = sum('total');
+    return cols.map(c=>{
+      if(c[1]==='qtd') return String(qtd);
+      if(c[1]==='total') return fmtMoney(total);
+      if(c[1]==='ticket') return fmtMoney(qtd?total/qtd:0);
+      if(c[1]===firstCol) return `Total (${rows.length} clientes)`;
       return '';
     });
   }
@@ -1911,7 +1987,7 @@ function exportPDF(tipo, rows, filterSummary){
   doc.autoTable({
     startY,
     head: [cols.map(c=>c[0])],
-    body: rows.map(r=>cols.map(c=>{ const v=r[c[1]]; if(typeof v==='boolean') return v?'Sim':'Não'; if(c[1]==='valor'||c[1]==='recebido'||c[1]==='pago') return fmtMoney(v); return v==null?'':String(v); })),
+    body: rows.map(r=>cols.map(c=>{ const v=r[c[1]]; if(typeof v==='boolean') return v?'Sim':'Não'; if(MONEY_COLS.includes(c[1])) return fmtMoney(v); return v==null?'':String(v); })),
     foot: foot?[foot]:undefined,
     styles:{fontSize:8, cellPadding:5}, headStyles:{fillColor:[45,55,116], textColor:255},
     footStyles:{fillColor:[230,230,224], textColor:[20,20,30], fontStyle:'bold'},
@@ -1919,7 +1995,7 @@ function exportPDF(tipo, rows, filterSummary){
   });
   saveFile(`visao-total-${tipo}-${todayISO()}.pdf`, doc.output('blob'));
 }
-function labelForTipo(tipo){ return {vistorias:'Vistorias', evolucao:'Evolução & Marketing', agendamentos:'Agendamentos', transferencias:'Transferências', geral:'Geral'}[tipo]||tipo; }
+function labelForTipo(tipo){ return {vistorias:'Vistorias', evolucao:'Evolução & Marketing', agendamentos:'Agendamentos', transferencias:'Transferências', geral:'Geral', vistoriasPorCliente:'Vistorias por Cliente'}[tipo]||tipo; }
 
 function drawPdfHeader(doc, title, subtitle){
   doc.setFillColor(45,55,116); doc.rect(0,0,doc.internal.pageSize.getWidth(),56,'F');
@@ -1958,7 +2034,7 @@ function generateReportPDF(tipo, periodFilter, extra, filterSummary){
     const cols = EXPORT_COLUMNS[t]; const rows = rowsFor(t, periodFilter, extra);
     const startY = drawPdfHeader(doc, `Relatório de ${labelForTipo(t)}`, [filterSummary, `${rows.length} registro(s)`].filter(Boolean).join(' · '));
     const foot = totalsRowFor(t, cols, rows);
-    doc.autoTable({ startY, head:[cols.map(c=>c[0])], body: rows.map(r=>cols.map(c=>{ const v=r[c[1]]; if(typeof v==='boolean') return v?'Sim':'Não'; if(['valor','recebido','pago'].includes(c[1])) return fmtMoney(v); return v==null?'':String(v); })),
+    doc.autoTable({ startY, head:[cols.map(c=>c[0])], body: rows.map(r=>cols.map(c=>{ const v=r[c[1]]; if(typeof v==='boolean') return v?'Sim':'Não'; if(MONEY_COLS.includes(c[1])) return fmtMoney(v); return v==null?'':String(v); })),
       foot: foot?[foot]:undefined,
       styles:{fontSize:8,cellPadding:5}, headStyles:{fillColor:[45,55,116], textColor:255}, footStyles:{fillColor:[230,230,224], textColor:[20,20,30], fontStyle:'bold'}, alternateRowStyles:{fillColor:[246,246,244]} });
   });
