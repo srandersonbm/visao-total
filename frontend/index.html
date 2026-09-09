@@ -373,7 +373,6 @@ const ICONS = {
   evolucao:'<path d="M4 17l5-5 4 4 7-8"/><path d="M15 8h5v5"/>',
   agendamentos:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16"/><path d="M8 3v4M16 3v4"/>',
   transferencias:'<path d="M6 8h12l-3.5-3.5"/><path d="M18 16H6l3.5 3.5"/>',
-  conciliacao:'<rect x="6" y="3" width="12" height="18" rx="2"/><path d="M8.5 7.5h7"/><circle cx="9" cy="11.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="11.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="11.5" r="0.9" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="0.9" fill="currentColor" stroke="none"/><circle cx="12" cy="15" r="0.9" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="0.9" fill="currentColor" stroke="none"/>',
   relatorios:'<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M9.5 12h5M9.5 15.5h5"/>',
   config:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2.4M12 18.6V21M4.5 7.5l2 1.4M17.5 15.1l2 1.4M3 12h2.4M18.6 12H21M4.5 16.5l2-1.4M17.5 8.9l2-1.4M7.5 4.5l1.4 2M15.1 17.5l1.4 2"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
@@ -403,7 +402,6 @@ const NAV = [
   {id:'evolucao', label:'Evolução & Marketing', icon:'evolucao'},
   {id:'agendamentos', label:'Agendamentos', icon:'agendamentos'},
   {id:'transferencias', label:'Transferências', icon:'transferencias'},
-  {id:'conciliacao', label:'Conciliação de Cartões', icon:'conciliacao'},
   {id:'relatorios', label:'Relatórios', icon:'relatorios'},
   {id:'config', label:'Configurações', icon:'config'},
 ];
@@ -413,7 +411,6 @@ const SUBTITLES = {
   evolucao:'Faturamento por canal e resultados de mídia',
   agendamentos:'Próximas vistorias e confirmações',
   transferencias:'Transferências e remarcações via despachante',
-  conciliacao:'Conferência de valores por maquineta',
   relatorios:'Exporte relatórios em PDF ou Excel',
   config:'Padrões, listas e identidade da empresa',
 };
@@ -427,9 +424,8 @@ const MESES_ABREV = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out'
 const state = {
   db:null, downloads:null,
   route:'home',
-  loaded:{vistorias:false, evolucao:false, agendamentos:false, transferencias:false, conciliacao:false, config:false},
+  loaded:{vistorias:false, evolucao:false, agendamentos:false, transferencias:false, config:false},
   vistorias:[], evolucao:[], agendamentos:[], transferencias:[],
-  conciliacao:{latam:[], santanderDebito:[], santanderCredito:[]},
   config:{empresa:{nome:'Visão Total Vistorias'}, tiposVistoria:[], formasPagamento:[], clientes:[]},
   ui:{
     sidebarOpen:false,
@@ -849,7 +845,7 @@ function renderRoute(){
   const fns = {
     home:renderHome, vistorias:renderVistorias, evolucao:renderEvolucao,
     agendamentos:renderAgendamentos, transferencias:renderTransferencias,
-    conciliacao:renderConciliacao, relatorios:renderRelatorios, config:renderConfig
+    relatorios:renderRelatorios, config:renderConfig
   };
   root.innerHTML = `<div class="panel">${fns[state.route]()}</div>`;
   mountAnimatedNumbers(root);
@@ -1035,7 +1031,7 @@ function vistoriasFilterSummary(){
   parts.push('Período: '+periodoLabel(f));
   if(f.tipos && f.tipos.length) parts.push('Tipo: '+f.tipos.join(', '));
   if(f.formas && f.formas.length) parts.push('Pagamento: '+f.formas.join(', '));
-  if(f.canais && f.canais.length) parts.push('Canal: '+getCanalOptions().filter(o=>f.canais.includes(o.value)).map(o=>o.label).join(', '));
+  if(f.canais && f.canais.length) parts.push('Cliente: '+getCanalOptions().filter(o=>f.canais.includes(o.value)).map(o=>o.label).join(', '));
   if(f.status) parts.push('Status: '+(f.status==='pendente'?'Pendente':'Concluída'));
   if(f.busca) parts.push('Busca: "'+f.busca+'"');
   return parts.join(' · ');
@@ -1057,7 +1053,7 @@ function renderVistorias(){
       ${renderPeriodField('vist', state.ui.vistoriasFilters)}
       ${renderMultiSelect('tipos','Tipo', state.config.tiposVistoria.map(t=>({value:t,label:t})), state.ui.vistoriasFilters.tipos)}
       ${renderMultiSelect('formas','Pagamento', state.config.formasPagamento.map(t=>({value:t,label:t})), state.ui.vistoriasFilters.formas)}
-      ${renderMultiSelect('canais','Canal', getCanalOptions(), state.ui.vistoriasFilters.canais)}
+      ${renderMultiSelect('canais','Cliente', getCanalOptions(), state.ui.vistoriasFilters.canais)}
       <div class="field"><label>Status</label><select data-filter="status"><option value="">Todos</option><option value="concluida" ${state.ui.vistoriasFilters.status==='concluida'?'selected':''}>Concluída</option><option value="pendente" ${state.ui.vistoriasFilters.status==='pendente'?'selected':''}>Pendente</option></select></div>
       <div class="field"><label>Buscar</label><div class="search-wrap">${icon('search')}<input class="input" data-filter="busca" placeholder="placa, cliente, veículo" value="${escapeHtml(state.ui.vistoriasFilters.busca)}"></div></div>
     </div>
@@ -1391,56 +1387,6 @@ afterRender.transferencias = (root)=>{
   root.querySelectorAll('[data-delete-transf]').forEach(el=>el.addEventListener('click',()=>confirmDialog('Excluir esta transferência?', ()=>deleteDoc('transferencias', el.dataset.deleteTransf))));
   const be = root.querySelector('[data-action="export-excel-transf"]'); be && be.addEventListener('click', ()=>exportExcel('transferencias', filteredTransferencias()));
   const bp = root.querySelector('[data-action="export-pdf-transf"]'); bp && bp.addEventListener('click', ()=>exportPDF('transferencias', filteredTransferencias()));
-};
-
-/* =========================================================================
-   PANEL: CONCILIAÇÃO DE CARTÕES
-   ========================================================================= */
-const CONC_COLS = [
-  {key:'latam', label:'Cartão Latam', color:'var(--c1)'},
-  {key:'santanderDebito', label:'Santander/C6 · Débito', color:'var(--c2)'},
-  {key:'santanderCredito', label:'Santander/C6 · Crédito', color:'var(--c3)'},
-];
-function renderConciliacao(){
-  const c = state.conciliacao;
-  const totalGeral = CONC_COLS.reduce((s,col)=>s+(c[col.key]||[]).reduce((a,b)=>a+b,0),0);
-  return `
-  <div class="panel-header"><div><h2>Conciliação de Cartões</h2><p>Conferência de repasses por maquineta</p></div></div>
-  <div class="kpi-row"><div class="card stat"><div class="stat-label">Total geral conferido</div><div class="stat-value" data-count="${totalGeral}" data-fmt="money">R$0</div></div></div>
-  <div class="grid-3">
-    ${CONC_COLS.map(col=>{
-      const vals = c[col.key]||[];
-      const total = vals.reduce((a,b)=>a+b,0);
-      return `<div class="card" style="padding:16px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;"><span class="avatar-dot" style="background:${col.color}"></span><h3 style="margin:0;font-size:14px;">${col.label}</h3></div>
-        <div class="stat-value" data-count="${total}" data-fmt="money" style="margin:6px 0 12px;">R$0</div>
-        <div class="mini-list" style="max-height:220px;overflow-y:auto;">
-          ${vals.length?vals.map((v,i)=>`<div class="mini-row"><span class="mono" style="flex:1;">${fmtMoney(v)}</span><button class="icon-btn" data-del-conc="${col.key}:${i}">${icon('trash')}</button></div>`).join(''):emptyState('Sem lançamentos')}
-        </div>
-        <div class="tag-add"><input class="input" type="number" step="0.01" placeholder="R$ 0,00" data-conc-input="${col.key}"><button class="btn btn-sm btn-primary" data-add-conc="${col.key}">${icon('plus')}</button></div>
-      </div>`;
-    }).join('')}
-  </div>
-  `;
-}
-afterRender.conciliacao = (root)=>{
-  root.querySelectorAll('[data-add-conc]').forEach(btn=>{
-    const key = btn.dataset.addConc;
-    const doAdd = ()=>{
-      const input = root.querySelector(`[data-conc-input="${key}"]`);
-      const v = parseFloat(input.value);
-      if(!v || v<=0) return;
-      const arr = [...(state.conciliacao[key]||[]), v];
-      updateDoc('conciliacao','atual',{[key]:arr});
-    };
-    btn.addEventListener('click', doAdd);
-    root.querySelector(`[data-conc-input="${key}"]`).addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); doAdd(); }});
-  });
-  root.querySelectorAll('[data-del-conc]').forEach(btn=>btn.addEventListener('click',()=>{
-    const [key,idx] = btn.dataset.delConc.split(':');
-    const arr = [...(state.conciliacao[key]||[])]; arr.splice(+idx,1);
-    updateDoc('conciliacao','atual',{[key]:arr});
-  }));
 };
 
 /* =========================================================================
@@ -2210,7 +2156,6 @@ function startApp(baseUrl, token){
   db.collection('evolucao').onSnapshot(snap=>{ state.evolucao = snap.docs.map(d=>({id:d.id, ...d.data()})); state.loaded.evolucao=true; scheduleRender(); }, ()=>{});
   db.collection('agendamentos').onSnapshot(snap=>{ state.agendamentos = snap.docs.map(d=>({id:d.id, ...d.data()})); state.loaded.agendamentos=true; scheduleRender(); }, ()=>{});
   db.collection('transferencias').onSnapshot(snap=>{ state.transferencias = snap.docs.map(d=>({id:d.id, ...d.data()})); state.loaded.transferencias=true; scheduleRender(); }, ()=>{});
-  db.doc('conciliacao/atual').onSnapshot(snap=>{ if(snap.exists) state.conciliacao = snap.data(); state.loaded.conciliacao=true; scheduleRender(); }, ()=>{});
   db.doc('config/geral').onSnapshot(snap=>{ if(snap.exists) state.config = Object.assign({empresa:{nome:'Visão Total Vistorias'}}, snap.data()); state.loaded.config=true; scheduleRender(); }, ()=>{});
 }
 
