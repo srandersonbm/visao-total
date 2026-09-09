@@ -432,6 +432,7 @@ const state = {
     homePeriod:'mes-atual',
     vistoriasFilters:{periodo:'todos', customStart:'', customEnd:'', mesRef:null, anoRef:null, tipos:[], formas:[], canais:[], status:'', busca:''},
     vistoriasPage:1,
+    vistoriasExportModo:'filtrado',
     transfPage:1,
     transfFilters:{periodo:'todos', customStart:'', customEnd:'', mesRef:null, anoRef:null},
     relatorio:{tipo:'vistorias', modo:'preset', periodo:'mes-atual', customStart:'', customEnd:'', mesRef:null, anoRef:null, cliente:'', tipos:[], formas:[], canais:[]},
@@ -1137,6 +1138,20 @@ function computeVistoriasBodyHtml(){
       <button class="btn btn-sm" data-page-vist="prev" ${state.ui.vistoriasPage<=1?'disabled':''}>Anterior</button>
       <button class="btn btn-sm" data-page-vist="next" ${state.ui.vistoriasPage>=pages?'disabled':''}>Próxima</button>
     </div>`:''}
+  </div>
+
+  <div class="card" style="padding:18px 20px;margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+    <div>
+      <h3 style="margin:0 0 2px;display:flex;align-items:center;gap:7px;">${icon('fileText')} Exportar em PDF</h3>
+      <div class="chart-sub">Escolha se o PDF traz <b>todos os lançamentos</b> cadastrados ou só os <b>${qtd} filtrados</b> agora (${fmtMoney(total)}) — o total sai somado no rodapé de qualquer um dos dois.</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="chip-select">
+        <span class="chip ${state.ui.vistoriasExportModo!=='todos'?'active':''}" data-export-modo="filtrado">Dados filtrados</span>
+        <span class="chip ${state.ui.vistoriasExportModo==='todos'?'active':''}" data-export-modo="todos">Todos os dados</span>
+      </div>
+      <button class="btn btn-primary" data-action="export-pdf-bottom">${icon('download')} Baixar PDF</button>
+    </div>
   </div>` };
 }
 function renderVistoriasBody(){
@@ -1150,6 +1165,19 @@ function renderVistoriasBody(){
   body.querySelectorAll('[data-page-vist]').forEach(b=>b.addEventListener('click',()=>{ state.ui.vistoriasPage += b.dataset.pageVist==='next'?1:-1; renderVistoriasBody(); }));
   body.querySelectorAll('[data-edit-vistoria]').forEach(tr=>tr.addEventListener('click',()=>openVistoriaDrawer(state.vistorias.find(v=>v.id===tr.dataset.editVistoria))));
   body.querySelectorAll('[data-delete-vistoria]').forEach(b=>b.addEventListener('click',()=>confirmDialog('Excluir esta vistoria?', ()=>deleteDoc('vistorias', b.dataset.deleteVistoria))));
+  body.querySelectorAll('[data-export-modo]').forEach(chip=>chip.addEventListener('click', ()=>{
+    state.ui.vistoriasExportModo = chip.dataset.exportModo;
+    renderVistoriasBody();
+  }));
+  const bottomPdfBtn = body.querySelector('[data-action="export-pdf-bottom"]');
+  if(bottomPdfBtn) bottomPdfBtn.addEventListener('click', ()=>{
+    if(state.ui.vistoriasExportModo==='todos'){
+      const allRows = [...state.vistorias].sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+      exportPDF('vistorias', allRows, 'Todos os registros cadastrados (sem filtro)');
+    } else {
+      exportPDF('vistorias', filteredVistorias(), vistoriasFilterSummary());
+    }
+  });
 }
 function refreshVistorias(){
   const body = document.getElementById('vistoriasBody');
